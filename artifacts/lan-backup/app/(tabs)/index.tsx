@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -116,6 +117,83 @@ export default function BackupScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (e) {
       Alert.alert("File Picker Error", String(e));
+    }
+  }, [setSelectedFiles]);
+
+  const pickFolder = useCallback(async () => {
+    if (Platform.OS === "ios") {
+      Alert.alert(
+        "Not supported on iOS",
+        "iOS does not allow apps to select entire folders. Use the file picker (+ button) to select multiple files individually."
+      );
+      return;
+    }
+    if (Platform.OS === "web") {
+      Alert.alert("Not supported", "Folder selection is not available on web.");
+      return;
+    }
+    try {
+      const permission =
+        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (!permission.granted) return;
+
+      const entries = await FileSystem.StorageAccessFramework.readDirectoryAsync(
+        permission.directoryUri
+      );
+
+      if (entries.length === 0) {
+        Alert.alert("Empty folder", "No files found in the selected folder.");
+        return;
+      }
+
+      const newFiles: SelectedFile[] = [];
+      let skipped = 0;
+
+      for (const uri of entries) {
+        try {
+          const info = await FileSystem.getInfoAsync(uri);
+          if (!info.exists || info.isDirectory) {
+            skipped++;
+            continue;
+          }
+          // Extract filename: SAF URI ends with encoded path, e.g. primary%3AFolder%2Ffile.txt
+          const decoded = decodeURIComponent(uri);
+          const name = decoded.split("/").pop() || "file";
+          newFiles.push({
+            uri,
+            name,
+            size: (info as FileSystem.FileInfo & { size?: number }).size ?? 0,
+          });
+        } catch {
+          skipped++;
+        }
+      }
+
+      if (newFiles.length === 0) {
+        Alert.alert(
+          "No readable files",
+          skipped > 0
+            ? `Found ${skipped} item(s) but none could be read (sub-folders or restricted files).`
+            : "Could not read any files from the selected folder."
+        );
+        return;
+      }
+
+      setSelectedFiles((prev) => {
+        const existingUris = new Set(prev.map((f) => f.uri));
+        return [...prev, ...newFiles.filter((f) => !existingUris.has(f.uri))];
+      });
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      if (skipped > 0) {
+        Alert.alert(
+          "Folder added",
+          `${newFiles.length} file(s) added. ${skipped} sub-folder(s) or unreadable item(s) were skipped.`
+        );
+      }
+    } catch (e) {
+      Alert.alert("Folder Error", String(e));
     }
   }, [setSelectedFiles]);
 
@@ -334,6 +412,13 @@ export default function BackupScreen() {
               activeOpacity={0.7}
             >
               <Feather name="plus" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.pickBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+              onPress={pickFolder}
+              activeOpacity={0.7}
+            >
+              <Feather name="folder" size={20} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[
