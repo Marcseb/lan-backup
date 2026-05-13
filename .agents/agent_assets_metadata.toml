@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "GZGRof6EKTc5lW_5cEK6Q"
+uri = "file://artifacts/lan-backup/assets/images/icon.png"
+type = "image"
+title = "generated_image"
