@@ -142,38 +142,60 @@ export default function BackupScreen() {
       let skipped = 0;
 
       // Recursively collect all files under a SAF directory URI.
-      // Uses legacyGetInfoAsync because the new v19 API does not handle SAF content:// URIs.
-      const collect = async (dirUri: string, depth: number): Promise<void> => {
-        if (depth > 20) return; // guard against circular / extremely deep trees
-        let entries: string[];
+      //
+      // legacyGetInfoAsync.isDirectory is unreliable for SAF document URIs — it
+      // often returns false even for real directories.  Instead we probe each
+      // entry by attempting readDirectoryAsync: success → directory (recurse);
+      // exception → file (add to list).
+      const processEntry = async (uri: string, depth: number): Promise<void> => {
+        if (depth > 20) return; // guard against extremely deep trees
+
+        // --- try as directory ---
+        let children: string[] | null = null;
         try {
-          entries = await StorageAccessFramework.readDirectoryAsync(dirUri);
+          children = await StorageAccessFramework.readDirectoryAsync(uri);
         } catch {
-          skipped++;
+          children = null;
+        }
+
+        if (children !== null) {
+          // It's a directory – process every child
+          for (const child of children) {
+            await processEntry(child, depth + 1);
+          }
           return;
         }
-        for (const uri of entries) {
-          try {
-            const info = await legacyGetInfoAsync(uri);
-            if (!info.exists) {
-              skipped++;
-              continue;
-            }
-            if (info.isDirectory) {
-              await collect(uri, depth + 1);
-            } else {
-              const decoded = decodeURIComponent(uri);
-              const name = decoded.split("/").pop() || "file";
-              const size = (info as { size?: number }).size ?? 0;
-              newFiles.push({ uri, name, size });
-            }
-          } catch {
+
+        // --- treat as file ---
+        try {
+          const info = await legacyGetInfoAsync(uri);
+          if (!info.exists) {
             skipped++;
+            return;
           }
+          const decoded = decodeURIComponent(uri);
+          const name = decoded.split("/").pop() || "file";
+          const size = (info as { size?: number }).size ?? 0;
+          newFiles.push({ uri, name, size });
+        } catch {
+          skipped++;
         }
       };
 
-      await collect(permission.directoryUri, 0);
+      // Seed the traversal from the granted root
+      let rootEntries: string[] = [];
+      try {
+        rootEntries = await StorageAccessFramework.readDirectoryAsync(
+          permission.directoryUri
+        );
+      } catch (e) {
+        Alert.alert("Folder Error", `Could not read folder: ${String(e)}`);
+        return;
+      }
+
+      for (const entry of rootEntries) {
+        await processEntry(entry, 0);
+      }
 
       if (newFiles.length === 0) {
         Alert.alert(
