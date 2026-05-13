@@ -5,7 +5,6 @@ import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
-  FlatList,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FileListItem } from "@/components/FileListItem";
 import { ServerStatusCard } from "@/components/ServerStatusCard";
@@ -31,6 +31,7 @@ interface FileProgress {
 export default function BackupScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const { settings, isConfigured, updateSetting } = useSettings();
   const {
     selectedFiles,
@@ -98,8 +99,10 @@ export default function BackupScreen() {
       const result = await DocumentPicker.getDocumentAsync({
         multiple: true,
         copyToCacheDirectory: true,
+        type: "*/*",
       });
       if (result.canceled) return;
+      if (!result.assets || result.assets.length === 0) return;
       const newFiles: SelectedFile[] = result.assets.map((a) => ({
         uri: a.uri,
         name: a.name,
@@ -111,8 +114,8 @@ export default function BackupScreen() {
         return [...prev, ...newFiles.filter((f) => !existingUris.has(f.uri))];
       });
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {
-      Alert.alert("Error", "Could not open file picker");
+    } catch (e) {
+      Alert.alert("File Picker Error", String(e));
     }
   }, [setSelectedFiles]);
 
@@ -228,7 +231,7 @@ export default function BackupScreen() {
           styles.content,
           {
             paddingTop: Platform.OS === "web" ? 67 + 16 : 16,
-            paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 0) + 100,
+            paddingBottom: tabBarHeight + 80,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -318,7 +321,8 @@ export default function BackupScreen() {
           {
             backgroundColor: colors.background,
             borderColor: colors.border,
-            paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 0) + 8,
+            bottom: tabBarHeight,
+            paddingBottom: 8,
           },
         ]}
       >
