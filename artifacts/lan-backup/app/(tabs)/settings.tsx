@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { KeyboardAwareScrollViewCompat } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "@/context/SettingsContext";
 import { useColors } from "@/hooks/useColors";
@@ -162,7 +161,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <KeyboardAwareScrollViewCompat
+    <ScrollView
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={[
         styles.content,
@@ -172,7 +171,6 @@ export default function SettingsScreen() {
         },
       ]}
       keyboardShouldPersistTaps="handled"
-      bottomOffset={20}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.section}>
@@ -345,7 +343,7 @@ export default function SettingsScreen() {
           </View>
         </View>
       </View>
-    </KeyboardAwareScrollViewCompat>
+    </ScrollView>
   );
 }
 
