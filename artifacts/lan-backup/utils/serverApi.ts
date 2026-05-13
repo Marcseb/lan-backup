@@ -106,6 +106,7 @@ export async function uploadFile(
         parameters: {
           targetFolder: settings.targetFolder,
           filename: file.name,
+          ...(file.relativePath ? { relativePath: file.relativePath } : {}),
         },
         headers: authHeaders(settings),
         onUploadProgress: ({ totalByteSent, totalBytesExpectedToSend }) => {

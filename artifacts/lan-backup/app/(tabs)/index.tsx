@@ -141,14 +141,35 @@ export default function BackupScreen() {
       const newFiles: SelectedFile[] = [];
       let skipped = 0;
 
+      // Derive the selected folder's display name from the granted tree URI.
+      // Tree URIs look like: .../tree/primary%3ADCIM%2FCamera
+      // Decoded last segment may be "primary:DCIM/Camera" (nested) or "primary:Camera" (root-level).
+      const decodedRoot = decodeURIComponent(permission.directoryUri);
+      const rootLastSeg = decodedRoot.split("/").pop() || "backup";
+      const rootFolderName = rootLastSeg.includes(":")
+        ? rootLastSeg.split(":").pop()!
+        : rootLastSeg;
+
       // Recursively collect all files under a SAF directory URI.
       //
       // legacyGetInfoAsync.isDirectory is unreliable for SAF document URIs — it
       // often returns false even for real directories.  Instead we probe each
       // entry by attempting readDirectoryAsync: success → directory (recurse);
       // exception → file (add to list).
-      const processEntry = async (uri: string, depth: number): Promise<void> => {
+      //
+      // parentRelPath is the relative path of the PARENT directory, e.g. "Camera/SubFolder".
+      // Each file gets relativePath = "Camera/SubFolder/photo.jpg" which the server
+      // uses to recreate the exact folder structure.
+      const processEntry = async (
+        uri: string,
+        depth: number,
+        parentRelPath: string
+      ): Promise<void> => {
         if (depth > 20) return; // guard against extremely deep trees
+
+        const decoded = decodeURIComponent(uri);
+        const entryName = decoded.split("/").pop() || "item";
+        const currentRelPath = `${parentRelPath}/${entryName}`;
 
         // --- try as directory ---
         let children: string[] | null = null;
@@ -159,9 +180,8 @@ export default function BackupScreen() {
         }
 
         if (children !== null) {
-          // It's a directory – process every child
           for (const child of children) {
-            await processEntry(child, depth + 1);
+            await processEntry(child, depth + 1, currentRelPath);
           }
           return;
         }
@@ -173,10 +193,8 @@ export default function BackupScreen() {
             skipped++;
             return;
           }
-          const decoded = decodeURIComponent(uri);
-          const name = decoded.split("/").pop() || "file";
           const size = (info as { size?: number }).size ?? 0;
-          newFiles.push({ uri, name, size });
+          newFiles.push({ uri, name: entryName, size, relativePath: currentRelPath });
         } catch {
           skipped++;
         }
@@ -194,7 +212,7 @@ export default function BackupScreen() {
       }
 
       for (const entry of rootEntries) {
-        await processEntry(entry, 0);
+        await processEntry(entry, 0, rootFolderName);
       }
 
       if (newFiles.length === 0) {

@@ -191,16 +191,41 @@ function json(res, status, data) {
 }
 
 // ── Path Traversal Guard ──────────────────────────────────────────────────────
-function safePath(folder, filename) {
-  const safeFolder = folder.replace(/[^a-zA-Z0-9_\-]/g, "_");
+// relativePath (optional): e.g. "Camera/SubFolder/photo.jpg"
+// When present the full directory structure is recreated inside targetFolder.
+function safePath(folder, filename, relativePath) {
+  const safeFolder = folder.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "backup";
+  const backupRoot = path.resolve(BACKUP_ROOT);
+
+  if (relativePath) {
+    // Validate every path segment — reject traversal attempts and illegal chars
+    const segments = relativePath.split("/").filter(Boolean);
+    for (const seg of segments) {
+      if (
+        seg === ".." ||
+        seg === "." ||
+        seg.startsWith(".") ||
+        /[<>:"|?*\x00-\x1f\\]/.test(seg)
+      ) {
+        throw new Error(`Invalid path segment: "${seg}"`);
+      }
+    }
+    // Last segment is the filename; preceding segments are directories
+    const fileName = path.basename(segments[segments.length - 1] || filename);
+    if (!fileName || fileName.startsWith(".")) throw new Error("Invalid filename");
+    const dirSegments = segments.slice(0, -1);
+    const targetDir = path.resolve(backupRoot, safeFolder, ...dirSegments);
+    if (!targetDir.startsWith(backupRoot)) throw new Error("Path traversal attempt detected");
+    return { targetDir, targetFile: path.join(targetDir, fileName) };
+  }
+
+  // Flat fallback (individual file picks, no folder structure)
   const safeFile = path.basename(filename);
-  if (safeFile.startsWith(".") || safeFile.includes("..")) {
+  if (!safeFile || safeFile.startsWith(".") || safeFile.includes("..")) {
     throw new Error("Invalid filename");
   }
-  const targetDir = path.resolve(BACKUP_ROOT, safeFolder);
-  if (!targetDir.startsWith(path.resolve(BACKUP_ROOT))) {
-    throw new Error("Path traversal attempt detected");
-  }
+  const targetDir = path.resolve(backupRoot, safeFolder);
+  if (!targetDir.startsWith(backupRoot)) throw new Error("Path traversal attempt detected");
   return { targetDir, targetFile: path.join(targetDir, safeFile) };
 }
 
@@ -242,9 +267,10 @@ const server = http.createServer((req, res) => {
       }
 
       const folder = parsed.fields.targetFolder || "backup";
+      const relativePath = parsed.fields.relativePath || null;
       let targetDir, targetFile;
       try {
-        ({ targetDir, targetFile } = safePath(folder, parsed.fileName));
+        ({ targetDir, targetFile } = safePath(folder, parsed.fileName, relativePath));
       } catch (e) {
         return json(res, 400, { error: String(e) });
       }

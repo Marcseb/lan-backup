@@ -12,6 +12,9 @@ export interface SelectedFile {
   name: string;
   size: number;
   mimeType?: string;
+  /** Relative path from the backup root, e.g. "Camera/SubFolder/photo.jpg".
+   *  Present when the file was picked via folder picker; absent for individual files. */
+  relativePath?: string;
 }
 
 export type TransferStatus = "idle" | "running" | "success" | "error" | "cancelled";
