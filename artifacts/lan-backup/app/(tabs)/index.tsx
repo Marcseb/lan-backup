@@ -51,7 +51,9 @@ export default function BackupScreen() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [fingerprintMismatch, setFingerprintMismatch] = useState(false);
   const [fileProgress, setFileProgress] = useState<Record<string, FileProgress>>({});
+  const [isScanning, setIsScanning] = useState(false);
   const cancelRef = useRef(false);
+  const scanCancelledRef = useRef(false);
 
   const checkServer = useCallback(async () => {
     if (!isConfigured) return;
@@ -133,11 +135,13 @@ export default function BackupScreen() {
       Alert.alert("Not supported", "Folder selection is not available on web.");
       return;
     }
+    scanCancelledRef.current = false;
     try {
       const permission =
         await StorageAccessFramework.requestDirectoryPermissionsAsync();
       if (!permission.granted) return;
 
+      setIsScanning(true);
       const newFiles: SelectedFile[] = [];
       let skipped = 0;
 
@@ -166,6 +170,7 @@ export default function BackupScreen() {
         parentRelPath: string
       ): Promise<void> => {
         if (depth > 20) return; // guard against extremely deep trees
+        if (scanCancelledRef.current) return;
 
         const decoded = decodeURIComponent(uri);
         const entryName = decoded.split("/").pop() || "item";
@@ -240,7 +245,12 @@ export default function BackupScreen() {
         );
       }
     } catch (e) {
-      Alert.alert("Folder Error", String(e));
+      if (!scanCancelledRef.current) {
+        Alert.alert("Folder Error", String(e));
+      }
+    } finally {
+      setIsScanning(false);
+      scanCancelledRef.current = false;
     }
   }, [setSelectedFiles]);
 
@@ -460,13 +470,23 @@ export default function BackupScreen() {
             >
               <Feather name="plus" size={20} color={colors.primary} />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.pickBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-              onPress={pickFolder}
-              activeOpacity={0.7}
-            >
-              <Feather name="folder" size={20} color={colors.primary} />
-            </TouchableOpacity>
+            {isScanning ? (
+              <TouchableOpacity
+                style={[styles.pickBtn, { backgroundColor: "#ef4444", borderColor: "#ef4444" }]}
+                onPress={() => { scanCancelledRef.current = true; }}
+                activeOpacity={0.7}
+              >
+                <Feather name="x" size={20} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.pickBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+                onPress={pickFolder}
+                activeOpacity={0.7}
+              >
+                <Feather name="folder" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[
                 styles.backupBtn,
