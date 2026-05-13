@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
-import { StorageAccessFramework } from "expo-file-system/legacy";
+import { StorageAccessFramework, getInfoAsync as legacyGetInfoAsync } from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -152,19 +152,27 @@ export default function BackupScreen() {
 
       for (const uri of entries) {
         try {
-          const info = await FileSystem.getInfoAsync(uri);
-          if (!info.exists || info.isDirectory) {
+          // Extract filename from SAF URI before any async work
+          // SAF URIs encode the path, e.g. primary%3AFolder%2Ffile.txt → file.txt
+          const decoded = decodeURIComponent(uri);
+          const name = decoded.split("/").pop() || "file";
+
+          // Use legacy getInfoAsync — the new v19 API does not handle SAF content:// URIs
+          const info = await legacyGetInfoAsync(uri);
+          if (!info.exists) {
             skipped++;
             continue;
           }
-          // Extract filename: SAF URI ends with encoded path, e.g. primary%3AFolder%2Ffile.txt
-          const decoded = decodeURIComponent(uri);
-          const name = decoded.split("/").pop() || "file";
-          newFiles.push({
-            uri,
-            name,
-            size: (info as FileSystem.FileInfo & { size?: number }).size ?? 0,
-          });
+
+          // Heuristic: SAF directory entries have no file extension
+          // Real directories returned by readDirectoryAsync have no "." in the last segment
+          if (!name.includes(".") && info.isDirectory) {
+            skipped++;
+            continue;
+          }
+
+          const size = (info as { size?: number }).size ?? 0;
+          newFiles.push({ uri, name, size });
         } catch {
           skipped++;
         }
