@@ -2,6 +2,9 @@ import { fetch } from "expo/fetch";
 import {
   uploadAsync,
   FileSystemUploadType,
+  copyAsync,
+  deleteAsync,
+  cacheDirectory,
 } from "expo-file-system/legacy";
 import type { Settings } from "@/context/SettingsContext";
 import type { SelectedFile } from "@/context/TransferContext";
@@ -77,34 +80,52 @@ export async function uploadFile(
 ): Promise<UploadResult> {
   onProgress?.(0, file.size);
 
-  // Use legacy uploadAsync — it handles SAF content:// URIs correctly.
-  // The new v19 File class does not support SAF URIs.
-  const res = await uploadAsync(
-    `${baseUrl(settings)}/upload`,
-    file.uri,
-    {
-      httpMethod: "POST",
-      uploadType: FileSystemUploadType.MULTIPART,
-      fieldName: "file",
-      mimeType: "application/octet-stream",
-      parameters: {
-        targetFolder: settings.targetFolder,
-        filename: file.name,
-      },
-      headers: authHeaders(settings),
-      onUploadProgress: ({ totalByteSent, totalBytesExpectedToSend }) => {
-        onProgress?.(totalByteSent, totalBytesExpectedToSend || file.size);
-      },
+  // SAF content:// URIs cannot be read directly by either the new v19 File API
+  // or the legacy uploadAsync native module.  Copy to a cache file:// path
+  // first, upload from there, then remove the temp copy.
+  const isSaf = file.uri.startsWith("content://");
+  const tempUri = isSaf
+    ? `${cacheDirectory}lb_upload_${Date.now()}_${file.name}`
+    : null;
+
+  try {
+    if (isSaf && tempUri) {
+      await copyAsync({ from: file.uri, to: tempUri });
     }
-  );
 
-  if (res.status === 401) throw new Error("Unauthorized — check your auth token");
-  if (res.status === 429) throw new Error("Rate limited by server — slow down");
-  if (res.status < 200 || res.status >= 300) {
-    throw new Error(`Upload failed: ${res.status} ${res.body}`);
+    const uploadUri = tempUri ?? file.uri;
+
+    const res = await uploadAsync(
+      `${baseUrl(settings)}/upload`,
+      uploadUri,
+      {
+        httpMethod: "POST",
+        uploadType: FileSystemUploadType.MULTIPART,
+        fieldName: "file",
+        mimeType: "application/octet-stream",
+        parameters: {
+          targetFolder: settings.targetFolder,
+          filename: file.name,
+        },
+        headers: authHeaders(settings),
+        onUploadProgress: ({ totalByteSent, totalBytesExpectedToSend }) => {
+          onProgress?.(totalByteSent, totalBytesExpectedToSend || file.size);
+        },
+      }
+    );
+
+    if (res.status === 401) throw new Error("Unauthorized — check your auth token");
+    if (res.status === 429) throw new Error("Rate limited by server — slow down");
+    if (res.status < 200 || res.status >= 300) {
+      throw new Error(`Upload failed: ${res.status} ${res.body}`);
+    }
+
+    const result = JSON.parse(res.body) as UploadResult;
+    onProgress?.(file.size, file.size);
+    return result;
+  } finally {
+    if (tempUri) {
+      await deleteAsync(tempUri, { idempotent: true }).catch(() => {});
+    }
   }
-
-  const result = JSON.parse(res.body) as UploadResult;
-  onProgress?.(file.size, file.size);
-  return result;
 }
