@@ -29,14 +29,31 @@ node server.js
 |---|---|---|
 | `LB_TOKEN` | *(required)* | Auth token — must match what you set in the app |
 | `LB_PORT` | `7823` | Port to listen on |
-| `LB_BACKUP_DIR` | `~/LAN-Backup` | Where uploaded files are stored |
+| `LB_BACKUP_DIR` | `~/LAN-Backup` | Root directory where uploaded files are stored |
+
+## What gets saved where
+
+Files are saved under `LB_BACKUP_DIR / <Target Folder> / <relative path>`.
+
+When you back up a folder from the app, the full directory structure is recreated on your computer. For example, if you select a folder called `Camera` containing a sub-folder `Screenshots`, the server will create:
+
+```
+~/LAN-Backup/
+└── phone/                  ← Target Folder set in the app
+    └── Camera/
+        ├── photo.jpg
+        └── Screenshots/
+            └── screen1.png
+```
+
+Individual files picked without a folder are saved flat inside the Target Folder.
 
 ## Security Features
 
 - **Bearer token auth** on all file-sensitive endpoints
-- **Rate limiting** — max 30 requests per minute per IP
-- **SHA-256 checksum** computed for every received file (returned in response)
-- **Path traversal protection** — filenames are sanitized; no `../` escapes
+- **Rate limiting** — max 600 requests per minute per IP (supports bulk folder backups)
+- **SHA-256 checksum** computed for every received file (returned in the response)
+- **Path traversal protection** — every path segment is validated; `../` escapes are rejected
 - **TOFU fingerprint** — a unique server ID is generated on first run and returned on `/ping`, allowing the app to detect server impersonation
 
 ## Endpoints
@@ -46,6 +63,15 @@ node server.js
 | `GET` | `/ping` | No | Returns server ID and version (used for TOFU) |
 | `GET` | `/disk` | Yes | Returns disk space info |
 | `POST` | `/upload` | Yes | Accepts a file upload (multipart/form-data) |
+
+### Upload fields
+
+| Field | Required | Description |
+|---|---|---|
+| `file` | Yes | The file binary (multipart) |
+| `targetFolder` | Yes | Sub-folder name inside the backup root |
+| `filename` | Yes | File name to save as |
+| `relativePath` | No | Full relative path including folder structure (e.g. `Camera/Screenshots/screen1.png`). When present, the directory tree is recreated automatically. |
 
 ## Security Recommendations
 

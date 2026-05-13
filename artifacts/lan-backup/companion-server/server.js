@@ -10,11 +10,12 @@
  *
  * Security features:
  *  - Bearer token auth on all sensitive endpoints
- *  - Rate limiting (max 30 req/min per IP)
+ *  - Rate limiting (max 600 req/min per IP)
  *  - SHA-256 checksum of received files for integrity verification
  *  - TOFU server ID (random persistent UUID)
  *  - Files saved only inside the configured backup directory
- *  - Path traversal protection (no ../ in filenames)
+ *  - Path traversal protection (every path segment validated; no ../ escapes)
+ *  - Folder structure preserved via relativePath field (sub-folders recreated on disk)
  */
 
 const http = require("http");
