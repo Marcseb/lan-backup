@@ -7,6 +7,7 @@ import { router, useNavigation } from "expo-router";
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Alert,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -614,6 +615,44 @@ export default function BackupScreen() {
               </Text>
             </View>
 
+            {/* Download & Support */}
+            <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <View style={helpStyles.sectionTitleRow}>
+                <Feather name="download" size={18} color={colors.primary} />
+                <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Get the companion server</Text>
+              </View>
+              <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
+                The latest version of <Text style={helpStyles.code}>server.js</Text> is available on GitHub. Open the link on your computer to download it.
+              </Text>
+              <TouchableOpacity
+                style={[helpStyles.linkBtn, { backgroundColor: colors.primary }]}
+                onPress={() => Linking.openURL("https://github.com/Marcseb/lan-backup")}
+                activeOpacity={0.8}
+              >
+                <Feather name="github" size={16} color={colors.primaryForeground} />
+                <Text style={[helpStyles.linkBtnText, { color: colors.primaryForeground }]}>
+                  github.com/Marcseb/lan-backup
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[helpStyles.section, { backgroundColor: "#fff7ed", borderColor: "#fed7aa" }]}>
+              <View style={helpStyles.sectionTitleRow}>
+                <Text style={{ fontSize: 18 }}>☕</Text>
+                <Text style={[helpStyles.sectionTitle, { color: "#9a3412" }]}>Support this project</Text>
+              </View>
+              <Text style={[helpStyles.body2, { color: "#c2410c" }]}>
+                LAN Backup is free and open source. If it saves you time, a coffee is always appreciated!
+              </Text>
+              <TouchableOpacity
+                style={[helpStyles.linkBtn, { backgroundColor: "#f97316" }]}
+                onPress={() => Linking.openURL("https://buymeacoffee.com/marcsebastien")}
+                activeOpacity={0.8}
+              >
+                <Text style={[helpStyles.linkBtnText, { color: "#fff" }]}>☕  Buy me a coffee</Text>
+              </TouchableOpacity>
+            </View>
+
           </ScrollView>
         </View>
       </Modal>
@@ -796,5 +835,19 @@ const helpStyles = StyleSheet.create({
     borderLeftWidth: 3,
     paddingLeft: 10,
     marginTop: 4,
+  },
+  linkBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  linkBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
 });
