@@ -20,7 +20,7 @@ The app runs inside **Expo Go**, a free shell available on both iOS and Android.
 1. Open Expo Go on your phone.
 2. Tap **"Enter URL manually"** and type:
    ```
-   exp://6ea29a26-a374-4b67-ac7b-a6eb0c7421ee-00-5bkvdz56o8j4.kirk.replit.dev/lan-backup
+   exp://6ea29a26-a374-4b67-ac7b-a6eb0c7421ee-00-5bkvdz56o8j4.expo.kirk.replit.dev
    ```
 3. The app will load. The first time may take a few seconds.
 
