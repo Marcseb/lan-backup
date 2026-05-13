@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
+import { StorageAccessFramework } from "expo-file-system";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -134,10 +135,10 @@ export default function BackupScreen() {
     }
     try {
       const permission =
-        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+        await StorageAccessFramework.requestDirectoryPermissionsAsync();
       if (!permission.granted) return;
 
-      const entries = await FileSystem.StorageAccessFramework.readDirectoryAsync(
+      const entries = await StorageAccessFramework.readDirectoryAsync(
         permission.directoryUri
       );
 
