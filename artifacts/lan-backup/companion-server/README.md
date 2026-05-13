@@ -1,6 +1,36 @@
-# LAN Backup — Companion Server
+# LAN Backup
 
-A lightweight Node.js HTTP server that runs on your computer to receive files from the LAN Backup mobile app.
+Back up files and folders from your phone to a computer on the same Wi-Fi network — no cloud, no account, no USB cable.
+
+---
+
+## Part 1 — Mobile app (your phone)
+
+The app runs inside **Expo Go**, a free shell available on both iOS and Android.
+
+### Install Expo Go
+
+| Platform | Link |
+|---|---|
+| Android | [Play Store — Expo Go](https://play.google.com/store/apps/details?id=host.exp.exponent) |
+| iOS | [App Store — Expo Go](https://apps.apple.com/app/expo-go/id982107779) |
+
+### Open LAN Backup
+
+1. Open Expo Go on your phone.
+2. Tap **"Enter URL manually"** and type:
+   ```
+   exp://6ea29a26-a374-4b67-ac7b-a6eb0c7421ee-00-5bkvdz56o8j4.kirk.replit.dev/lan-backup
+   ```
+3. The app will load. The first time may take a few seconds.
+
+> **Note:** both your phone and your computer must be on the same Wi-Fi network for transfers to work.
+
+---
+
+## Part 2 — Companion server (your computer)
+
+A lightweight Node.js HTTP server that receives files from the app.
 
 ## Requirements
 
