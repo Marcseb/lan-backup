@@ -138,52 +138,49 @@ export default function BackupScreen() {
         await StorageAccessFramework.requestDirectoryPermissionsAsync();
       if (!permission.granted) return;
 
-      const entries = await StorageAccessFramework.readDirectoryAsync(
-        permission.directoryUri
-      );
-
-      if (entries.length === 0) {
-        Alert.alert("Empty folder", "No files found in the selected folder.");
-        return;
-      }
-
       const newFiles: SelectedFile[] = [];
       let skipped = 0;
 
-      for (const uri of entries) {
+      // Recursively collect all files under a SAF directory URI.
+      // Uses legacyGetInfoAsync because the new v19 API does not handle SAF content:// URIs.
+      const collect = async (dirUri: string, depth: number): Promise<void> => {
+        if (depth > 20) return; // guard against circular / extremely deep trees
+        let entries: string[];
         try {
-          // Extract filename from SAF URI before any async work
-          // SAF URIs encode the path, e.g. primary%3AFolder%2Ffile.txt → file.txt
-          const decoded = decodeURIComponent(uri);
-          const name = decoded.split("/").pop() || "file";
-
-          // Use legacy getInfoAsync — the new v19 API does not handle SAF content:// URIs
-          const info = await legacyGetInfoAsync(uri);
-          if (!info.exists) {
-            skipped++;
-            continue;
-          }
-
-          // Heuristic: SAF directory entries have no file extension
-          // Real directories returned by readDirectoryAsync have no "." in the last segment
-          if (!name.includes(".") && info.isDirectory) {
-            skipped++;
-            continue;
-          }
-
-          const size = (info as { size?: number }).size ?? 0;
-          newFiles.push({ uri, name, size });
+          entries = await StorageAccessFramework.readDirectoryAsync(dirUri);
         } catch {
           skipped++;
+          return;
         }
-      }
+        for (const uri of entries) {
+          try {
+            const info = await legacyGetInfoAsync(uri);
+            if (!info.exists) {
+              skipped++;
+              continue;
+            }
+            if (info.isDirectory) {
+              await collect(uri, depth + 1);
+            } else {
+              const decoded = decodeURIComponent(uri);
+              const name = decoded.split("/").pop() || "file";
+              const size = (info as { size?: number }).size ?? 0;
+              newFiles.push({ uri, name, size });
+            }
+          } catch {
+            skipped++;
+          }
+        }
+      };
+
+      await collect(permission.directoryUri, 0);
 
       if (newFiles.length === 0) {
         Alert.alert(
           "No readable files",
           skipped > 0
-            ? `Found ${skipped} item(s) but none could be read (sub-folders or restricted files).`
-            : "Could not read any files from the selected folder."
+            ? `Scanned ${skipped} item(s) but none were readable files.`
+            : "The selected folder (and all sub-folders) appear to be empty."
         );
         return;
       }
@@ -195,10 +192,11 @@ export default function BackupScreen() {
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      if (skipped > 0) {
+      const subfolderNote = skipped > 0 ? ` (${skipped} item(s) skipped)` : "";
+      if (newFiles.length > 0) {
         Alert.alert(
-          "Folder added",
-          `${newFiles.length} file(s) added. ${skipped} sub-folder(s) or unreadable item(s) were skipped.`
+          "Folder scanned",
+          `${newFiles.length} file(s) found across all sub-folders.${subfolderNote}`
         );
       }
     } catch (e) {
