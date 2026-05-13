@@ -30,7 +30,7 @@ const AUTH_TOKEN = process.env.LB_TOKEN || "";
 const BACKUP_ROOT = process.env.LB_BACKUP_DIR || path.join(process.env.HOME || os.homedir(), "LAN-Backup");
 const SERVER_ID_FILE = path.join(__dirname, ".server-id");
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_MAX = 600; // 10 uploads/sec sustained — protects against DoS while allowing bulk backups
 
 if (!AUTH_TOKEN) {
   console.error("⚠️  No auth token set! Set LB_TOKEN environment variable.");

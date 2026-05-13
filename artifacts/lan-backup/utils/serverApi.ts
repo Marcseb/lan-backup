@@ -1,5 +1,8 @@
 import { fetch } from "expo/fetch";
-import { File } from "expo-file-system";
+import {
+  uploadAsync,
+  FileSystemUploadType,
+} from "expo-file-system/legacy";
 import type { Settings } from "@/context/SettingsContext";
 import type { SelectedFile } from "@/context/TransferContext";
 
@@ -72,28 +75,36 @@ export async function uploadFile(
   file: SelectedFile,
   onProgress?: (sent: number, total: number) => void
 ): Promise<UploadResult> {
-  const nativeFile = new File(file.uri);
-  const formData = new FormData();
-  formData.append("file", nativeFile as unknown as Blob, file.name);
-  formData.append("targetFolder", settings.targetFolder);
-  formData.append("filename", file.name);
-
   onProgress?.(0, file.size);
 
-  const res = await fetch(`${baseUrl(settings)}/upload`, {
-    method: "POST",
-    headers: authHeaders(settings),
-    body: formData,
-  });
+  // Use legacy uploadAsync — it handles SAF content:// URIs correctly.
+  // The new v19 File class does not support SAF URIs.
+  const res = await uploadAsync(
+    `${baseUrl(settings)}/upload`,
+    file.uri,
+    {
+      httpMethod: "POST",
+      uploadType: FileSystemUploadType.MULTIPART,
+      fieldName: "file",
+      mimeType: "application/octet-stream",
+      parameters: {
+        targetFolder: settings.targetFolder,
+        filename: file.name,
+      },
+      headers: authHeaders(settings),
+      onUploadProgress: ({ totalByteSent, totalBytesExpectedToSend }) => {
+        onProgress?.(totalByteSent, totalBytesExpectedToSend || file.size);
+      },
+    }
+  );
 
   if (res.status === 401) throw new Error("Unauthorized — check your auth token");
   if (res.status === 429) throw new Error("Rate limited by server — slow down");
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Upload failed: ${res.status} ${text}`);
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Upload failed: ${res.status} ${res.body}`);
   }
 
-  const result = (await res.json()) as UploadResult;
+  const result = JSON.parse(res.body) as UploadResult;
   onProgress?.(file.size, file.size);
   return result;
 }
