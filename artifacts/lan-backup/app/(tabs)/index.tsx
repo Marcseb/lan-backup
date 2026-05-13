@@ -3,10 +3,11 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { StorageAccessFramework, getInfoAsync as legacyGetInfoAsync } from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { router, useNavigation } from "expo-router";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -52,8 +53,24 @@ export default function BackupScreen() {
   const [fingerprintMismatch, setFingerprintMismatch] = useState(false);
   const [fileProgress, setFileProgress] = useState<Record<string, FileProgress>>({});
   const [isScanning, setIsScanning] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const cancelRef = useRef(false);
   const scanCancelledRef = useRef(false);
+
+  const navigation = useNavigation();
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => setShowHelp(true)}
+          style={{ marginRight: 16, padding: 4 }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Feather name="help-circle" size={22} color={colors.mutedForeground} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.mutedForeground]);
 
   const checkServer = useCallback(async () => {
     if (!isConfigured) return;
@@ -531,6 +548,75 @@ export default function BackupScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* ── Help Modal ── */}
+      <Modal
+        visible={showHelp}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowHelp(false)}
+      >
+        <View style={[helpStyles.container, { backgroundColor: colors.background }]}>
+          <View style={[helpStyles.header, { borderBottomColor: colors.border }]}>
+            <Text style={[helpStyles.title, { color: colors.foreground }]}>Help</Text>
+            <TouchableOpacity onPress={() => setShowHelp(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={24} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={helpStyles.body} showsVerticalScrollIndicator={false}>
+
+            {/* What is LAN Backup */}
+            <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <View style={helpStyles.sectionTitleRow}>
+                <Feather name="smartphone" size={18} color={colors.primary} />
+                <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>What is LAN Backup?</Text>
+              </View>
+              <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
+                LAN Backup lets you transfer files and folders from your phone to a computer on the same Wi-Fi network — no cloud, no account, no USB cable required.{"\n\n"}
+                Files travel directly over your local network using a small companion server that runs on your computer. All transfers are protected by a secret auth token and a server fingerprint that detects unexpected server changes.
+              </Text>
+            </View>
+
+            {/* Installation */}
+            <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <View style={helpStyles.sectionTitleRow}>
+                <Feather name="monitor" size={18} color={colors.primary} />
+                <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Installing the companion server</Text>
+              </View>
+              <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
+                The companion server is a single JavaScript file that runs on your computer (macOS, Windows, or Linux). Node.js 18 or later is required.
+              </Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>1. Copy <Text style={helpStyles.code}>server.js</Text> from the project's <Text style={helpStyles.code}>companion-server/</Text> folder to your computer.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>2. Open a terminal in the same folder and run:</Text>
+              <View style={[helpStyles.codeBlock, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={[helpStyles.codeText, { color: colors.foreground }]}>{"# macOS / Linux\nLB_TOKEN=your_secret node server.js\n\n# Windows\nset LB_TOKEN=your_secret\nnode server.js"}</Text>
+              </View>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>3. The server listens on port <Text style={helpStyles.code}>7823</Text> by default. Files are saved to <Text style={helpStyles.code}>~/LAN-Backup</Text>.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>4. Keep the terminal open while doing backups.</Text>
+            </View>
+
+            {/* Settings */}
+            <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <View style={helpStyles.sectionTitleRow}>
+                <Feather name="settings" size={18} color={colors.primary} />
+                <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Configuring the app</Text>
+              </View>
+              <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
+                Open the <Text style={{ fontFamily: "Inter_600SemiBold" }}>Settings</Text> tab and fill in the following fields:
+              </Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Server IP</Text> — the local IP address of your computer (e.g. <Text style={helpStyles.code}>192.168.1.10</Text>). Find it in your computer's network settings.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Port</Text> — leave at <Text style={helpStyles.code}>7823</Text> unless you changed it with <Text style={helpStyles.code}>LB_PORT</Text>.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Auth Token</Text> — the exact same value you used for <Text style={helpStyles.code}>LB_TOKEN</Text> when starting the server.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Target Folder</Text> — an optional sub-folder name inside the backup directory (e.g. <Text style={helpStyles.code}>phone</Text>).</Text>
+              <Text style={[helpStyles.tip, { color: colors.mutedForeground, borderLeftColor: colors.primary }]}>
+                💡 Tap <Text style={{ fontFamily: "Inter_600SemiBold" }}>Check Server</Text> after saving to verify the connection. A green status means you're ready to back up.
+              </Text>
+            </View>
+
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -641,5 +727,74 @@ const styles = StyleSheet.create({
   backupBtnText: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
+  },
+});
+
+const helpStyles = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  title: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+  },
+  body: {
+    padding: 16,
+    gap: 16,
+  },
+  section: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    flexShrink: 1,
+  },
+  body2: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 22,
+  },
+  step: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 21,
+  },
+  code: {
+    fontFamily: "monospace",
+    fontSize: 13,
+  },
+  codeBlock: {
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 12,
+    marginVertical: 2,
+  },
+  codeText: {
+    fontFamily: "monospace",
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  tip: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
+    borderLeftWidth: 3,
+    paddingLeft: 10,
+    marginTop: 4,
   },
 });
