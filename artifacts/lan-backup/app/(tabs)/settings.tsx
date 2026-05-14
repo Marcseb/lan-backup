@@ -305,27 +305,33 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             )}
-            {discovered.map((server) => (
-              <TouchableOpacity
-                key={server.ip}
-                style={[styles.serverRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => selectServer(server)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.serverIcon, { backgroundColor: colors.accent }]}>
-                  <Feather name="monitor" size={20} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.serverName, { color: colors.foreground }]}>
-                    {server.hostname}
-                  </Text>
-                  <Text style={[styles.serverIp, { color: colors.mutedForeground }]}>
-                    {server.ip}
-                  </Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            ))}
+            {discovered.map((server) => {
+              const displayName =
+                server.hostname && server.hostname !== server.ip
+                  ? server.hostname
+                  : "LAN Backup Server";
+              return (
+                <TouchableOpacity
+                  key={server.ip}
+                  style={[styles.serverRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={() => selectServer(server)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.serverIcon, { backgroundColor: colors.accent }]}>
+                    <Feather name="monitor" size={20} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.serverName, { color: colors.foreground }]}>
+                      {displayName}
+                    </Text>
+                    <Text style={[styles.serverIp, { color: colors.mutedForeground }]}>
+                      {server.ip}
+                    </Text>
+                  </View>
+                  <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
 
           {!scanning && (
