@@ -26,6 +26,15 @@ The app runs inside **Expo Go**, a free shell available on both iOS and Android.
 
 > **Note:** both your phone and your computer must be on the same Wi-Fi network for transfers to work.
 
+### First-time setup
+
+Once the app is open, go to the **Settings** tab:
+
+1. Tap **"Detect computers on this network"** — the app will scan your Wi-Fi and list any computers running the companion server. Tap your computer to fill in its IP automatically.
+2. Enter the **auth token** — must match the `LB_TOKEN` you set when starting the server.
+3. Optionally adjust the **Target Folder** name (default: `backup`).
+4. Tap **Save Settings**, then **Test Connection** to confirm everything works.
+
 ---
 
 ## Part 2 — Companion server (your computer)
