@@ -606,12 +606,12 @@ export default function BackupScreen() {
               <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
                 Open the <Text style={{ fontFamily: "Inter_600SemiBold" }}>Settings</Text> tab and fill in the following fields:
               </Text>
-              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Server IP</Text> — the local IP address of your computer (e.g. <Text style={helpStyles.code}>192.168.1.10</Text>). Find it in your computer's network settings.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Server IP</Text> — tap <Text style={helpStyles.code}>Detect computers on this network</Text> to scan your Wi-Fi and pick your computer automatically. Or enter its IP address manually (e.g. <Text style={helpStyles.code}>192.168.1.10</Text>).</Text>
               <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Port</Text> — leave at <Text style={helpStyles.code}>7823</Text> unless you changed it with <Text style={helpStyles.code}>LB_PORT</Text>.</Text>
               <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Auth Token</Text> — the exact same value you used for <Text style={helpStyles.code}>LB_TOKEN</Text> when starting the server.</Text>
               <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Target Folder</Text> — an optional sub-folder name inside the backup directory (e.g. <Text style={helpStyles.code}>phone</Text>).</Text>
               <Text style={[helpStyles.tip, { color: colors.mutedForeground, borderLeftColor: colors.primary }]}>
-                💡 Tap <Text style={{ fontFamily: "Inter_600SemiBold" }}>Check Server</Text> after saving to verify the connection. A green status means you're ready to back up.
+                💡 Tap <Text style={{ fontFamily: "Inter_600SemiBold" }}>Test Connection</Text> after saving to verify the connection. A green status means you're ready to back up.
               </Text>
             </View>
 
