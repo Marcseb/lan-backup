@@ -249,7 +249,7 @@ const server = http.createServer((req, res) => {
 
   // GET /ping — TOFU fingerprint (no auth required)
   if (req.method === "GET" && url.pathname === "/ping") {
-    return json(res, 200, { id: SERVER_ID, version: "1.0.0", backupDir: BACKUP_ROOT });
+    return json(res, 200, { id: SERVER_ID, version: "1.0.0", hostname: os.hostname(), backupDir: BACKUP_ROOT });
   }
 
   // GET /disk — disk info (auth required)

@@ -19,6 +19,55 @@ export interface DiskInfo {
 export interface PingResult {
   id: string;
   version: string;
+  hostname?: string;
+}
+
+export interface DiscoveredServer {
+  ip: string;
+  hostname: string;
+  id: string;
+}
+
+export async function discoverServers(
+  subnet: string,
+  port: string,
+  onProgress: (scanned: number, total: number, found: DiscoveredServer[]) => void,
+  signal: AbortSignal
+): Promise<DiscoveredServer[]> {
+  const found: DiscoveredServer[] = [];
+  const total = 254;
+  let scanned = 0;
+  const BATCH = 30;
+  const TIMEOUT_MS = 500;
+
+  const ips: string[] = [];
+  for (let i = 1; i <= 254; i++) ips.push(`${subnet}${i}`);
+
+  for (let start = 0; start < ips.length; start += BATCH) {
+    if (signal.aborted) break;
+    const batch = ips.slice(start, start + BATCH);
+    await Promise.all(
+      batch.map(async (ip) => {
+        if (signal.aborted) return;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+        try {
+          const res = await fetch(`http://${ip}:${port}/ping`, { signal: ctrl.signal });
+          if (res.ok) {
+            const data = (await res.json()) as PingResult;
+            found.push({ ip, hostname: data.hostname ?? ip, id: data.id });
+          }
+        } catch {
+          // timeout or unreachable — expected for most IPs
+        } finally {
+          clearTimeout(timer);
+          scanned++;
+          onProgress(scanned, total, [...found]);
+        }
+      })
+    );
+  }
+  return found;
 }
 
 function baseUrl(settings: Settings) {
