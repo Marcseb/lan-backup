@@ -638,6 +638,25 @@ export default function BackupScreen() {
               </Text>
             </View>
 
+            {/* Image Compression */}
+            <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <View style={helpStyles.sectionTitleRow}>
+                <Feather name="minimize-2" size={18} color={colors.primary} />
+                <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Image compression</Text>
+              </View>
+              <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
+                The compression button (⊡) in the action bar lets you reduce the size of photos before they are sent. This is useful for documents like bills or receipts where a smaller, readable file is enough.
+              </Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>Tap <Text style={helpStyles.code}>⊡</Text> to toggle compression on or off for the current backup. The button turns blue when active.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>In <Text style={helpStyles.code}>Settings → Image Compression Quality</Text>, choose the preset that suits your needs:</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Low</Text> — 40% quality, max 1024 px. Ideal for bills, receipts, and text documents.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Medium</Text> — 65% quality, max 1920 px. Good balance for everyday photos.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>High</Text> — 85% quality, max 2560 px. Near-original quality with modest size reduction.</Text>
+              <Text style={[helpStyles.tip, { color: colors.mutedForeground, borderLeftColor: colors.primary }]}>
+                💡 Only image files (JPG, PNG, HEIC, WebP) are compressed. Videos, PDFs, and other files are always sent as-is.
+              </Text>
+            </View>
+
             {/* Download & Support */}
             <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
               <View style={helpStyles.sectionTitleRow}>

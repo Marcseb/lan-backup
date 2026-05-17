@@ -35,6 +35,21 @@ Once the app is open, go to the **Settings** tab:
 3. Optionally adjust the **Target Folder** name (default: `backup`).
 4. Tap **Save Settings**, then **Test Connection** to confirm everything works.
 
+### Image compression (optional)
+
+The **⊡** button in the action bar lets you compress photos before they are sent — useful for documents like bills or receipts where a small, readable file is enough.
+
+- Tap ⊡ to toggle compression on (button turns blue) or off before starting a backup.
+- In **Settings → Image Compression Quality**, choose your preset:
+
+| Preset | JPEG quality | Max dimension | Best for |
+|--------|-------------|---------------|----------|
+| Low    | 40%         | 1024 px       | Bills, receipts, text documents |
+| Medium | 65%         | 1920 px       | Everyday photos |
+| High   | 85%         | 2560 px       | Near-original quality |
+
+> Only image files (JPG, PNG, HEIC, WebP) are compressed. Videos, PDFs, and other files are always sent as-is.
+
 ---
 
 ## Part 2 — Companion server (your computer)
