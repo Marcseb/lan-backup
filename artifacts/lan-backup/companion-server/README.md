@@ -134,3 +134,12 @@ Individual files picked without a folder are saved flat inside the Target Folder
 3. **Don't expose to the internet** — keep the server running only while doing backups; stop it when done.
 4. **Firewall** — consider restricting the port (7823) to your LAN subnet only.
 5. **Check the terminal logs** — every upload is logged with filename, size, and checksum.
+
+---
+
+## Support this project
+
+LAN Backup is free and open source. If it saves you time, a contribution is always appreciated!
+
+- ☕ [Buy me a coffee](https://buymeacoffee.com/marcsebastien)
+- 💙 [Donate via PayPal](https://www.paypal.com/donate/?business=7AUYVWJE39NMQ&no_recurring=0&item_name=Building+open+source+apps+that+are+secure%2C+practical%2C+and+keep+your+data+local%E2%80%94not+in+the+cloud.&currency_code=EUR)

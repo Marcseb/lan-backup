@@ -684,7 +684,7 @@ export default function BackupScreen() {
                 <Text style={[helpStyles.sectionTitle, { color: "#9a3412" }]}>Support this project</Text>
               </View>
               <Text style={[helpStyles.body2, { color: "#c2410c" }]}>
-                LAN Backup is free and open source. If it saves you time, a coffee is always appreciated!
+                LAN Backup is free and open source. If it saves you time, a contribution is always appreciated!
               </Text>
               <TouchableOpacity
                 style={[helpStyles.linkBtn, { backgroundColor: "#f97316" }]}
@@ -692,6 +692,13 @@ export default function BackupScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={[helpStyles.linkBtnText, { color: "#fff" }]}>☕  Buy me a coffee</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[helpStyles.linkBtn, { backgroundColor: "#003087", marginTop: 8 }]}
+                onPress={() => Linking.openURL("https://www.paypal.com/donate/?business=7AUYVWJE39NMQ&no_recurring=0&item_name=Building+open+source+apps+that+are+secure%2C+practical%2C+and+keep+your+data+local%E2%80%94not+in+the+cloud.&currency_code=EUR")}
+                activeOpacity={0.8}
+              >
+                <Text style={[helpStyles.linkBtnText, { color: "#fff" }]}>💙  Donate via PayPal</Text>
               </TouchableOpacity>
             </View>
 
