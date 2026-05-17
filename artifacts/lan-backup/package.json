@@ -59,6 +59,7 @@
     "expo-crypto": "~15.0.9",
     "expo-document-picker": "^14.0.8",
     "expo-file-system": "^19.0.22",
+    "expo-image-manipulator": "^55.0.16",
     "expo-network": "^56.0.3",
     "expo-secure-store": "^15.0.8"
   }

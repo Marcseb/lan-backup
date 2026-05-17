@@ -24,7 +24,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { type SelectedFile, useTransfer } from "@/context/TransferContext";
 import { useColors } from "@/hooks/useColors";
 import type { DiskInfo } from "@/utils/serverApi";
-import { getDiskInfo, pingServer, uploadFile } from "@/utils/serverApi";
+import { compressImageIfNeeded, getDiskInfo, pingServer, uploadFile } from "@/utils/serverApi";
 
 interface FileProgress {
   progress: number | null;
@@ -305,7 +305,13 @@ export default function BackupScreen() {
       });
 
       try {
-        await uploadFile(settings, file, (_sent, total) => {
+        const { uri: uploadUri, isTemp } = settings.compressImages
+          ? await compressImageIfNeeded(file, settings.imageQuality)
+          : { uri: file.uri, isTemp: false };
+
+        const fileToUpload = isTemp ? { ...file, uri: uploadUri } : file;
+
+        await uploadFile(settings, fileToUpload, (_sent, total) => {
           setFileProgress((prev) => ({
             ...prev,
             [file.uri]: { progress: _sent / total, done: false, error: null },
@@ -505,6 +511,23 @@ export default function BackupScreen() {
                 <Feather name="folder" size={20} color={colors.primary} />
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={[
+                styles.pickBtn,
+                {
+                  backgroundColor: settings.compressImages ? colors.primary : colors.secondary,
+                  borderColor: settings.compressImages ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => updateSetting("compressImages", !settings.compressImages)}
+              activeOpacity={0.7}
+            >
+              <Feather
+                name="minimize-2"
+                size={20}
+                color={settings.compressImages ? colors.primaryForeground : colors.mutedForeground}
+              />
+            </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.backupBtn,

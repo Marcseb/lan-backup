@@ -6,8 +6,63 @@ import {
   deleteAsync,
   cacheDirectory,
 } from "expo-file-system/legacy";
-import type { Settings } from "@/context/SettingsContext";
+import * as ImageManipulator from "expo-image-manipulator";
+import { Image } from "react-native";
+import type { ImageQuality, Settings } from "@/context/SettingsContext";
 import type { SelectedFile } from "@/context/TransferContext";
+
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "heic", "heif", "webp"]);
+
+function isImageFile(filename: string): boolean {
+  return IMAGE_EXTENSIONS.has(filename.split(".").pop()?.toLowerCase() ?? "");
+}
+
+const QUALITY_MAP: Record<ImageQuality, { compress: number; maxDimension: number }> = {
+  low:    { compress: 0.4, maxDimension: 1024 },
+  medium: { compress: 0.65, maxDimension: 1920 },
+  high:   { compress: 0.85, maxDimension: 2560 },
+};
+
+function getImageDimensions(uri: string): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    Image.getSize(uri, (w, h) => resolve({ width: w, height: h }), () => resolve(null));
+  });
+}
+
+export async function compressImageIfNeeded(
+  file: SelectedFile,
+  quality: ImageQuality
+): Promise<{ uri: string; isTemp: boolean }> {
+  if (!isImageFile(file.name)) return { uri: file.uri, isTemp: false };
+
+  const { compress, maxDimension } = QUALITY_MAP[quality];
+  const actions: ImageManipulator.Action[] = [];
+
+  try {
+    const dims = await getImageDimensions(file.uri);
+    if (dims) {
+      const longest = Math.max(dims.width, dims.height);
+      if (longest > maxDimension) {
+        const scale = maxDimension / longest;
+        actions.push({
+          resize: {
+            width: Math.round(dims.width * scale),
+            height: Math.round(dims.height * scale),
+          },
+        });
+      }
+    }
+
+    const result = await ImageManipulator.manipulateAsync(
+      file.uri,
+      actions,
+      { compress, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return { uri: result.uri, isTemp: true };
+  } catch {
+    return { uri: file.uri, isTemp: false };
+  }
+}
 
 export interface DiskInfo {
   total: number;

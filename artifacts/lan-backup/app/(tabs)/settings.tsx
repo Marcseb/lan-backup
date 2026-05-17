@@ -214,6 +214,12 @@ export default function SettingsScreen() {
     closeDiscovery();
   };
 
+  const QUALITY_LABELS: Record<string, string> = {
+    low:    "Low — small file, readable text (bills, receipts)",
+    medium: "Medium — balanced quality and size",
+    high:   "High — near-original quality",
+  };
+
   const handleClearFingerprint = () => {
     Alert.alert(
       "Clear Trusted Server",
@@ -409,6 +415,50 @@ export default function SettingsScreen() {
             placeholder="backup"
             hint="Folder name created inside the server's backup directory"
           />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+          IMAGE COMPRESSION QUALITY
+        </Text>
+        <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {(["low", "medium", "high"] as const).map((q, i, arr) => (
+            <React.Fragment key={q}>
+              <TouchableOpacity
+                style={styles.qualityRow}
+                onPress={() => updateSetting("imageQuality", q)}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.qualityRadio,
+                  { borderColor: settings.imageQuality === q ? colors.primary : colors.border },
+                ]}>
+                  {settings.imageQuality === q && (
+                    <View style={[styles.qualityRadioDot, { backgroundColor: colors.primary }]} />
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.qualityLabel, { color: colors.foreground }]}>
+                    {q.charAt(0).toUpperCase() + q.slice(1)}
+                  </Text>
+                  <Text style={[styles.qualityHint, { color: colors.mutedForeground }]}>
+                    {QUALITY_LABELS[q]}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              {i < arr.length - 1 && (
+                <View style={[styles.separator, { backgroundColor: colors.border }]} />
+              )}
+            </React.Fragment>
+          ))}
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          <View style={[styles.qualityInfo, { backgroundColor: colors.accent }]}>
+            <Feather name="info" size={13} color={colors.accentForeground} />
+            <Text style={[styles.qualityInfoText, { color: colors.accentForeground }]}>
+              Toggle compression on/off using the <Text style={{ fontFamily: "Inter_600SemiBold" }}>⊡</Text> button on the Backup screen. This setting controls the quality when compression is active.
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -779,5 +829,48 @@ const styles = StyleSheet.create({
   rescanBtnText: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
+  },
+  qualityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+  },
+  qualityRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qualityRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  qualityLabel: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+  qualityHint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  qualityInfo: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    margin: 14,
+    padding: 10,
+    borderRadius: 8,
+  },
+  qualityInfoText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
   },
 });
