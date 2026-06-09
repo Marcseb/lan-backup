@@ -170,6 +170,49 @@ export async function getDiskInfo(settings: Settings): Promise<DiskInfo> {
   return (await res.json()) as DiskInfo;
 }
 
+export interface ExportFile {
+  name: string;
+  size: number;
+  mtime: number;
+}
+
+export async function listExportFiles(settings: Settings): Promise<{ files: ExportFile[]; exportDir: string }> {
+  const res = await fetch(`${baseUrl(settings)}/export/list`, {
+    method: "GET",
+    headers: authHeaders(settings),
+  });
+  if (res.status === 401) throw new Error("Unauthorized — check your auth token");
+  if (!res.ok) throw new Error(`Server error: ${res.status}`);
+  return (await res.json()) as { files: ExportFile[]; exportDir: string };
+}
+
+export async function downloadExportFile(
+  settings: Settings,
+  filename: string,
+  destUri: string,
+  onProgress?: (received: number, total: number) => void
+): Promise<void> {
+  const safeFilename = filename.split("/").pop() ?? filename;
+  const url = `${baseUrl(settings)}/export/file?name=${encodeURIComponent(safeFilename)}`;
+
+  const { downloadAsync, createDownloadResumable } = await import("expo-file-system/legacy");
+  void downloadAsync; // keep import happy
+
+  const task = createDownloadResumable(
+    url,
+    destUri,
+    { headers: authHeaders(settings) },
+    (progress) => {
+      onProgress?.(progress.totalBytesWritten, progress.totalBytesExpectedToWrite);
+    }
+  );
+
+  const result = await task.downloadAsync();
+  if (!result || result.status < 200 || result.status >= 300) {
+    throw new Error(`Download failed: ${result?.status ?? "unknown"}`);
+  }
+}
+
 export interface UploadResult {
   filename: string;
   size: number;

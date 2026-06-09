@@ -16,6 +16,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "arrow.up.doc", selected: "arrow.up.doc.fill" }} />
         <Label>Backup</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="restore">
+        <Icon sf={{ default: "arrow.down.doc", selected: "arrow.down.doc.fill" }} />
+        <Label>Restore</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="history">
         <Icon sf={{ default: "clock", selected: "clock.fill" }} />
         <Label>History</Label>
@@ -74,6 +78,18 @@ function ClassicTabLayout() {
               <SymbolView name="arrow.up.doc" tintColor={color} size={22} />
             ) : (
               <Feather name="upload-cloud" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="restore"
+        options={{
+          title: "Restore",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="arrow.down.doc" tintColor={color} size={22} />
+            ) : (
+              <Feather name="download-cloud" size={22} color={color} />
             ),
         }}
       />

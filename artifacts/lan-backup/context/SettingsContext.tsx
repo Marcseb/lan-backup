@@ -17,6 +17,9 @@ export interface Settings {
   serverFingerprint: string | null;
   compressImages: boolean;
   imageQuality: ImageQuality;
+  restoreUnlocked: boolean;
+  restoreUnlockKey: string;
+  restoreFolder: string;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -27,6 +30,9 @@ const DEFAULT_SETTINGS: Settings = {
   serverFingerprint: null,
   compressImages: false,
   imageQuality: "low",
+  restoreUnlocked: false,
+  restoreUnlockKey: "",
+  restoreFolder: "",
 };
 
 const KEYS = {
@@ -37,6 +43,9 @@ const KEYS = {
   serverFingerprint: "lb_server_fingerprint",
   compressImages: "lb_compress_images",
   imageQuality: "lb_image_quality",
+  restoreUnlocked: "lb_restore_unlocked",
+  restoreUnlockKey: "lb_restore_unlock_key",
+  restoreFolder: "lb_restore_folder",
 } as const;
 
 interface SettingsContextValue {
@@ -57,7 +66,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function load() {
       try {
-        const [ip, port, token, folder, fingerprint, compress, quality] = await Promise.all([
+        const [ip, port, token, folder, fingerprint, compress, quality, restoreUnlocked, restoreUnlockKey, restoreFolder] = await Promise.all([
           SecureStore.getItemAsync(KEYS.serverIp),
           SecureStore.getItemAsync(KEYS.serverPort),
           SecureStore.getItemAsync(KEYS.authToken),
@@ -65,6 +74,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           SecureStore.getItemAsync(KEYS.serverFingerprint),
           SecureStore.getItemAsync(KEYS.compressImages),
           SecureStore.getItemAsync(KEYS.imageQuality),
+          SecureStore.getItemAsync(KEYS.restoreUnlocked),
+          SecureStore.getItemAsync(KEYS.restoreUnlockKey),
+          SecureStore.getItemAsync(KEYS.restoreFolder),
         ]);
         setSettings({
           serverIp: ip ?? DEFAULT_SETTINGS.serverIp,
@@ -74,6 +86,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           serverFingerprint: fingerprint,
           compressImages: compress === "true",
           imageQuality: (quality as ImageQuality) ?? DEFAULT_SETTINGS.imageQuality,
+          restoreUnlocked: restoreUnlocked === "true",
+          restoreUnlockKey: restoreUnlockKey ?? "",
+          restoreFolder: restoreFolder ?? "",
         });
       } catch {
         // SecureStore unavailable (web preview) — use defaults
@@ -113,6 +128,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           : SecureStore.deleteItemAsync(KEYS.serverFingerprint),
         SecureStore.setItemAsync(KEYS.compressImages, String(s.compressImages)),
         SecureStore.setItemAsync(KEYS.imageQuality, s.imageQuality),
+        SecureStore.setItemAsync(KEYS.restoreUnlocked, String(s.restoreUnlocked)),
+        s.restoreUnlockKey
+          ? SecureStore.setItemAsync(KEYS.restoreUnlockKey, s.restoreUnlockKey)
+          : SecureStore.deleteItemAsync(KEYS.restoreUnlockKey),
+        s.restoreFolder
+          ? SecureStore.setItemAsync(KEYS.restoreFolder, s.restoreFolder)
+          : SecureStore.deleteItemAsync(KEYS.restoreFolder),
       ]);
     } catch {
       // ignore on web

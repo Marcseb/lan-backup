@@ -110,13 +110,40 @@ Individual files picked without a folder are saved flat inside the Target Folder
 - **Path traversal protection** — every path segment is validated; `../` escapes are rejected
 - **TOFU fingerprint** — a unique server ID is generated on first run and returned on `/ping`, allowing the app to detect server impersonation
 
+## Restore — Desktop to Phone (unlockable feature)
+
+You can also send files **from your computer to your phone** using the **Restore** tab in the app. This feature requires a one-time €5 contribution (unlocked via PayPal inside the app).
+
+### How it works
+
+1. Place the files you want to send to your phone inside the **`export/`** sub-folder of the backup directory:
+   ```
+   ~/LAN-Backup/
+   ├── backup/         ← phone → desktop (as before)
+   └── export/         ← desktop → phone  ← put files here
+       ├── photo.jpg
+       └── document.pdf
+   ```
+2. Open the **Restore** tab in the app.
+3. The app lists the files in `export/` — select one or several, choose a destination folder on your phone, and tap **Download to phone**.
+
+### Security of the export folder
+
+- Only **flat files** in `export/` are served — subdirectories and symlinks are never accessible.
+- The same **bearer token auth** and **TOFU fingerprint** protection apply.
+- File names are validated with `path.basename()` on both sides to prevent any path traversal.
+
+---
+
 ## Endpoints
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | `GET` | `/ping` | No | Returns server ID and version (used for TOFU) |
 | `GET` | `/disk` | Yes | Returns disk space info |
-| `POST` | `/upload` | Yes | Accepts a file upload (multipart/form-data) |
+| `POST` | `/upload` | Yes | Accepts a file upload (phone → desktop) |
+| `GET` | `/export/list` | Yes | Lists files available in the `export/` folder |
+| `GET` | `/export/file?name=x` | Yes | Downloads one file from `export/` to the phone |
 
 ### Upload fields
 

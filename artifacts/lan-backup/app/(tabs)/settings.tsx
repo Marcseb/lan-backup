@@ -563,6 +563,31 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+          RESTORE (DESKTOP → PHONE)
+        </Text>
+        <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.securityRow}>
+            <Feather
+              name={settings.restoreUnlocked ? "unlock" : "lock"}
+              size={16}
+              color={settings.restoreUnlocked ? colors.success : colors.mutedForeground}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.securityTitle, { color: colors.foreground }]}>
+                {settings.restoreUnlocked ? "Restore unlocked ✓" : "Restore not yet unlocked"}
+              </Text>
+              <Text style={[styles.securitySub, { color: colors.mutedForeground }]}>
+                {settings.restoreUnlocked
+                  ? "You have permanent access to the Restore feature."
+                  : "A one-time €5 contribution unlocks this feature. See the Restore tab."}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
           COMPANION SERVER
         </Text>
         <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>

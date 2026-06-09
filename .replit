@@ -38,3 +38,8 @@ externalPort = 80
 [[ports]]
 localPort = 19922
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+PAYPAL_BUSINESS_EMAIL = "7AUYVWJE39NMQ"

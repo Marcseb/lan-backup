@@ -230,6 +230,35 @@ function safePath(folder, filename, relativePath) {
   return { targetDir, targetFile: path.join(targetDir, safeFile) };
 }
 
+// ── Export folder (desktop→phone) ────────────────────────────────────────────
+// Files placed here are listable and downloadable by the app.
+// Restricted to a flat list — no subdirectory traversal allowed.
+const EXPORT_DIR = path.join(BACKUP_ROOT, "export");
+fs.mkdirSync(EXPORT_DIR, { recursive: true });
+
+function safeExportFile(filename) {
+  const base = path.basename(filename);
+  if (!base || base.startsWith(".") || base.includes("..")) {
+    throw new Error("Invalid filename");
+  }
+  const resolved = path.resolve(EXPORT_DIR, base);
+  if (!resolved.startsWith(path.resolve(EXPORT_DIR))) {
+    throw new Error("Path traversal attempt");
+  }
+  // Reject symlinks to prevent pointing outside export dir
+  try {
+    const stat = fs.lstatSync(resolved);
+    if (stat.isSymbolicLink()) throw new Error("Symlinks not allowed");
+  } catch (e) {
+    if (e.message !== "Symlinks not allowed") {
+      // file doesn't exist yet — that's fine for listing; caller checks existence
+    } else {
+      throw e;
+    }
+  }
+  return resolved;
+}
+
 // ── HTTP Server ───────────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
   const ip = req.socket.remoteAddress || "unknown";
@@ -299,6 +328,72 @@ const server = http.createServer((req, res) => {
         });
       });
     });
+    return;
+  }
+
+  // GET /export/list — list files available for download to phone (auth required)
+  if (req.method === "GET" && url.pathname === "/export/list") {
+    if (!isAuthorized(req)) return json(res, 401, { error: "Unauthorized" });
+    try {
+      const entries = fs.readdirSync(EXPORT_DIR, { withFileTypes: true });
+      const files = entries
+        .filter((e) => {
+          if (!e.isFile()) return false;
+          if (e.name.startsWith(".")) return false;
+          // Reject symlinks
+          const full = path.join(EXPORT_DIR, e.name);
+          try {
+            return fs.lstatSync(full).isFile();
+          } catch {
+            return false;
+          }
+        })
+        .map((e) => {
+          const full = path.join(EXPORT_DIR, e.name);
+          let size = 0;
+          let mtime = 0;
+          try {
+            const st = fs.statSync(full);
+            size = st.size;
+            mtime = st.mtimeMs;
+          } catch {}
+          return { name: e.name, size, mtime };
+        });
+      return json(res, 200, { files, exportDir: EXPORT_DIR });
+    } catch (e) {
+      return json(res, 500, { error: String(e) });
+    }
+  }
+
+  // GET /export/file?name=filename.ext — download one file (auth required)
+  if (req.method === "GET" && url.pathname === "/export/file") {
+    if (!isAuthorized(req)) return json(res, 401, { error: "Unauthorized" });
+    const name = url.searchParams.get("name") || "";
+    let filePath;
+    try {
+      filePath = safeExportFile(name);
+    } catch (e) {
+      return json(res, 400, { error: String(e) });
+    }
+    if (!fs.existsSync(filePath)) return json(res, 404, { error: "File not found" });
+
+    const stat = fs.statSync(filePath);
+    const ext = path.extname(name).toLowerCase();
+    const mimeMap = {
+      ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+      ".gif": "image/gif", ".webp": "image/webp", ".pdf": "application/pdf",
+      ".mp4": "video/mp4", ".mov": "video/quicktime", ".mp3": "audio/mpeg",
+      ".zip": "application/zip", ".txt": "text/plain",
+    };
+    const mime = mimeMap[ext] || "application/octet-stream";
+
+    res.writeHead(200, {
+      "Content-Type": mime,
+      "Content-Length": stat.size,
+      "Content-Disposition": `attachment; filename="${encodeURIComponent(path.basename(name))}"`,
+    });
+    fs.createReadStream(filePath).pipe(res);
+    console.log(`[EXPORT] ${name} → ${filePath} (${stat.size} bytes)`);
     return;
   }
 
