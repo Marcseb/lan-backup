@@ -424,8 +424,18 @@ export default function RestoreScreen() {
         {/* Error */}
         {error && (
           <View style={[styles.errorBox, { backgroundColor: "#fee2e2", borderColor: "#fca5a5" }]}>
-            <Feather name="alert-circle" size={14} color="#dc2626" />
-            <Text style={[styles.errorText, { color: "#dc2626" }]}>{error}</Text>
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, flex: 1 }}>
+              <Feather name="alert-circle" size={14} color="#dc2626" style={{ marginTop: 2 }} />
+              <Text style={[styles.errorText, { color: "#dc2626", flex: 1 }]}>{error}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={load}
+              style={{ marginTop: 10, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6 }}
+              activeOpacity={0.7}
+            >
+              <Feather name="refresh-cw" size={13} color="#dc2626" />
+              <Text style={{ color: "#dc2626", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>Retry</Text>
+            </TouchableOpacity>
           </View>
         )}
 
