@@ -108,11 +108,9 @@ function PaywallScreen() {
   const [email, setEmail] = useState("");
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paid, setPaid] = useState(false);
 
   const openPayPal = () => {
     openURL(PAYPAL_DONATE_URL);
-    setPaid(true);
   };
 
   const checkPayment = async () => {
@@ -194,54 +192,44 @@ function PaywallScreen() {
           <Text style={styles.paywallPayBtnText}>Pay €5 via PayPal to unlock</Text>
         </TouchableOpacity>
 
-        {paid && (
-          <View style={[styles.paywallCheckSection, { borderColor: colors.border }]}>
-            <Text style={[styles.paywallCheckLabel, { color: colors.foreground }]}>
-              After payment, enter the email you used for PayPal:
-            </Text>
-            <View style={[styles.paywallEmailRow, { borderColor: colors.border, backgroundColor: colors.background }]}>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="your@email.com"
-                placeholderTextColor={colors.mutedForeground}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={[styles.paywallEmailInput, { color: colors.foreground }]}
-              />
-            </View>
-            {error && (
-              <View style={[styles.paywallError, { backgroundColor: "#fee2e2", borderColor: "#fca5a5" }]}>
-                <Feather name="alert-circle" size={14} color="#dc2626" />
-                <Text style={[styles.paywallErrorText, { color: "#dc2626" }]}>{error}</Text>
-              </View>
-            )}
-            <TouchableOpacity
-              style={[styles.paywallCheckBtn, { backgroundColor: colors.primary }]}
-              onPress={checkPayment}
-              disabled={checking}
-              activeOpacity={0.8}
-            >
-              {checking ? (
-                <ActivityIndicator size="small" color={colors.primaryForeground} />
-              ) : (
-                <Feather name="unlock" size={16} color={colors.primaryForeground} />
-              )}
-              <Text style={[styles.paywallCheckBtnText, { color: colors.primaryForeground }]}>
-                {checking ? "Checking…" : "Check payment & unlock"}
-              </Text>
-            </TouchableOpacity>
+        <View style={[styles.paywallCheckSection, { borderColor: colors.border }]}>
+          <Text style={[styles.paywallCheckLabel, { color: colors.foreground }]}>
+            After payment, enter the email you used on PayPal:
+          </Text>
+          <View style={[styles.paywallEmailRow, { borderColor: colors.border, backgroundColor: colors.background }]}>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="your@email.com"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={[styles.paywallEmailInput, { color: colors.foreground }]}
+            />
           </View>
-        )}
-
-        {!paid && (
-          <TouchableOpacity onPress={() => setPaid(true)}>
-            <Text style={[styles.paywallAlreadyPaid, { color: colors.mutedForeground }]}>
-              Already paid? Tap here to enter your email.
+          {error && (
+            <View style={[styles.paywallError, { backgroundColor: "#fee2e2", borderColor: "#fca5a5" }]}>
+              <Feather name="alert-circle" size={14} color="#dc2626" />
+              <Text style={[styles.paywallErrorText, { color: "#dc2626" }]}>{error}</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={[styles.paywallCheckBtn, { backgroundColor: colors.primary }]}
+            onPress={checkPayment}
+            disabled={checking}
+            activeOpacity={0.8}
+          >
+            {checking ? (
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+            ) : (
+              <Feather name="unlock" size={16} color={colors.primaryForeground} />
+            )}
+            <Text style={[styles.paywallCheckBtnText, { color: colors.primaryForeground }]}>
+              {checking ? "Checking…" : "Check payment & unlock"}
             </Text>
           </TouchableOpacity>
-        )}
+        </View>
       </View>
     </ScrollView>
   );
