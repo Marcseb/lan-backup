@@ -1,26 +1,5 @@
-import crypto from "node:crypto";
 import app from "./app";
-import { db, unlocksTable } from "@workspace/db";
 import { logger } from "./lib/logger";
-
-// Seed manual unlocks on startup — remove after first production deploy
-async function seedManualUnlocks() {
-  const emails = [
-    "marc.di_martino@hotmail.com",
-    "alex13.dimartino@gmail.com",
-    "ilaria.calamari@outlook.com",
-  ];
-  for (const payerEmail of emails) {
-    await db.insert(unlocksTable).values({
-      id: crypto.randomUUID(),
-      payerEmail,
-      unlockKey: crypto.randomBytes(24).toString("hex"),
-      paypalTxnId: "MANUAL",
-      sandbox: false,
-    }).onConflictDoNothing();
-  }
-  logger.info({ count: emails.length }, "Manual unlock seed complete");
-}
 
 const rawPort = process.env["PORT"];
 
@@ -43,5 +22,4 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
-  seedManualUnlocks().catch((e) => logger.error({ err: e }, "Seed failed"));
 });
