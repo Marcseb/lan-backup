@@ -146,6 +146,7 @@ router.get("/unlock/check", async (req: Request, res: Response) => {
   }
 
   const email = parsed.data.email.toLowerCase().trim();
+  req.log.info({ email, query: req.query }, "unlock/check: querying");
   const rows = await db
     .select()
     .from(unlocksTable)
