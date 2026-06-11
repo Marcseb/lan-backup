@@ -42,4 +42,4 @@ externalPort = 3000
 [userenv]
 
 [userenv.shared]
-PAYPAL_BUSINESS_EMAIL = "7AUYVWJE39NMQ"
+PAYPAL_MERCHANT_ID = "7AUYVWJE39NMQ"

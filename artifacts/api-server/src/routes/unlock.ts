@@ -11,8 +11,10 @@ const router: IRouter = Router();
 const PAYPAL_VERIFY_URL_LIVE = "https://ipnpb.paypal.com/cgi-bin/webscr";
 const PAYPAL_VERIFY_URL_SANDBOX = "https://ipnpb.sandbox.paypal.com/cgi-bin/webscr";
 
-// The email address registered as the PayPal business account
-const PAYPAL_BUSINESS = process.env.PAYPAL_BUSINESS_EMAIL ?? "7AUYVWJE39NMQ";
+// Your PayPal Merchant ID (the receiver_id field in IPN notifications)
+const PAYPAL_MERCHANT_ID = process.env.PAYPAL_MERCHANT_ID ?? "7AUYVWJE39NMQ";
+// Optionally also validate receiver email if set
+const PAYPAL_BUSINESS_EMAIL = process.env.PAYPAL_BUSINESS_EMAIL ?? "";
 // Minimum payment amount in EUR
 const MIN_AMOUNT = parseFloat(process.env.UNLOCK_MIN_AMOUNT ?? "4.50");
 const CURRENCY = process.env.UNLOCK_CURRENCY ?? "EUR";
@@ -61,9 +63,16 @@ router.post("/unlock/ipn", async (req: Request, res: Response) => {
     return;
   }
 
-  // Validate business email
-  if (params.receiver_email !== PAYPAL_BUSINESS && params.business !== PAYPAL_BUSINESS) {
-    req.log.warn({ receiver: params.receiver_email }, "IPN: receiver email mismatch");
+  // Validate receiver — check merchant ID (receiver_id) and optionally email
+  const receiverId = params.receiver_id ?? "";
+  const receiverEmail = params.receiver_email ?? "";
+  const businessField = params.business ?? "";
+  const idMatch = receiverId === PAYPAL_MERCHANT_ID;
+  const emailMatch = PAYPAL_BUSINESS_EMAIL
+    ? receiverEmail === PAYPAL_BUSINESS_EMAIL || businessField === PAYPAL_BUSINESS_EMAIL
+    : true;
+  if (!idMatch && !emailMatch) {
+    req.log.warn({ receiverId, receiverEmail }, "IPN: receiver mismatch");
     return;
   }
 
