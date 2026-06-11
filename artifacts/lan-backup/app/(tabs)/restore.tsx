@@ -489,7 +489,7 @@ export default function RestoreScreen() {
             {
               backgroundColor: colors.card,
               borderTopColor: colors.border,
-              paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 0) + 8,
+              paddingBottom: insets.bottom + tabBarHeight + 8,
             },
           ]}
         >
