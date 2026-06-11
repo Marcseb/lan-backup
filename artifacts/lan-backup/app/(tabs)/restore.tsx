@@ -154,34 +154,20 @@ function PaywallScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <View style={[styles.paywallCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={[styles.paywallIconRow]}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View style={[styles.paywallIconBg, { backgroundColor: "#003087" + "22" }]}>
-            <Feather name="download-cloud" size={32} color="#003087" />
+            <Feather name="download-cloud" size={22} color="#003087" />
           </View>
+          <Text style={[styles.paywallTitle, { color: colors.foreground, textAlign: "left" }]}>
+            Restore — Desktop to Phone
+          </Text>
         </View>
-        <Text style={[styles.paywallTitle, { color: colors.foreground }]}>
-          Restore — Desktop to Phone
-        </Text>
-        <Text style={[styles.paywallBody, { color: colors.mutedForeground }]}>
+
+        <Text style={[styles.paywallBody, { color: colors.mutedForeground, textAlign: "left" }]}>
           Download files from your computer's{" "}
           <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>export/</Text>{" "}
-          folder directly to your phone. A one-time contribution of €5 unlocks this feature permanently.
+          folder directly to your phone. One-time €5 contribution, unlocked permanently.
         </Text>
-
-        <View style={[styles.paywallFeatureList, { borderColor: colors.border }]}>
-          {[
-            "Browse files in the export/ folder on your desktop",
-            "Select and download one or multiple files",
-            "Files saved to a folder of your choice on your phone",
-            "Same bearer token security as backups",
-            "Unlock is permanent — stored encrypted on your device",
-          ].map((f) => (
-            <View key={f} style={styles.paywallFeatureRow}>
-              <Feather name="check" size={14} color={colors.success} />
-              <Text style={[styles.paywallFeatureText, { color: colors.foreground }]}>{f}</Text>
-            </View>
-          ))}
-        </View>
 
         <TouchableOpacity
           style={[styles.paywallPayBtn, { backgroundColor: "#003087" }]}
@@ -640,7 +626,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   paywallIconRow: { alignItems: "center" },
-  paywallIconBg: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center" },
+  paywallIconBg: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   paywallTitle: { fontSize: 20, fontFamily: "Inter_700Bold", textAlign: "center" },
   paywallBody: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 21, textAlign: "center" },
   paywallFeatureList: { borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 12, gap: 10 },
