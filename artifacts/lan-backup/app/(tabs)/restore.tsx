@@ -9,6 +9,7 @@ import {
 } from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
 import { openURL } from "expo-linking";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -263,6 +264,14 @@ export default function RestoreScreen() {
       load();
     }
   }, [settings.restoreUnlocked, isConfigured, load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (settings.restoreUnlocked && isConfigured) {
+        load();
+      }
+    }, [settings.restoreUnlocked, isConfigured, load])
+  );
 
   const toggleSelect = (name: string) => {
     setSelected((prev) => {
