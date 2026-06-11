@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -43,3 +43,6 @@ externalPort = 3000
 
 [userenv.shared]
 PAYPAL_MERCHANT_ID = "7AUYVWJE39NMQ"
+
+[nix]
+channel = "stable-25_05"
