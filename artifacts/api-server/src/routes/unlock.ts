@@ -160,26 +160,4 @@ router.get("/unlock/check", async (req: Request, res: Response) => {
   res.json({ unlocked: true, unlockKey: rows[0].unlockKey });
 });
 
-// POST /api/unlock/admin-grant  — temporary manual unlock endpoint
-const ADMIN_SECRET = process.env.SESSION_SECRET ?? "";
-const GrantSchema = z.object({ email: z.email(), secret: z.string() });
-
-router.post("/unlock/admin-grant", async (req: Request, res: Response) => {
-  const parsed = GrantSchema.safeParse(req.body);
-  if (!parsed.success || !ADMIN_SECRET || parsed.data.secret !== ADMIN_SECRET) {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
-  const email = parsed.data.email.toLowerCase().trim();
-  const existing = await db.select().from(unlocksTable).where(eq(unlocksTable.payerEmail, email)).limit(1);
-  if (existing.length > 0) {
-    res.json({ status: "already_exists", email, unlockKey: existing[0].unlockKey });
-    return;
-  }
-  const unlockKey = crypto.randomBytes(24).toString("hex");
-  await db.insert(unlocksTable).values({ id: crypto.randomUUID(), payerEmail: email, unlockKey, paypalTxnId: "MANUAL", sandbox: false });
-  req.log.info({ email }, "admin-grant: unlock created");
-  res.json({ status: "created", email, unlockKey });
-});
-
 export default router;
