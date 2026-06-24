@@ -4,7 +4,7 @@ import * as FileSystem from "expo-file-system";
 import { StorageAccessFramework, getInfoAsync as legacyGetInfoAsync } from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
 import { router, useNavigation } from "expo-router";
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Alert,
   Linking,
@@ -16,7 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FileListItem } from "@/components/FileListItem";
 import { ServerStatusCard } from "@/components/ServerStatusCard";
@@ -35,7 +35,7 @@ interface FileProgress {
 export default function BackupScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? (49 + insets.bottom);
   const { settings, isConfigured, updateSetting } = useSettings();
   const {
     selectedFiles,

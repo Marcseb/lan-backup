@@ -10,7 +10,7 @@ import {
 import * as Haptics from "expo-haptics";
 import { openURL } from "expo-linking";
 import { useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -24,7 +24,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "@/context/SettingsContext";
 import { useColors } from "@/hooks/useColors";
@@ -226,7 +226,7 @@ function PaywallScreen() {
 export default function RestoreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? (49 + insets.bottom);
   const { settings, isConfigured, updateSetting } = useSettings();
 
   const [files, setFiles] = useState<ExportFile[]>([]);
