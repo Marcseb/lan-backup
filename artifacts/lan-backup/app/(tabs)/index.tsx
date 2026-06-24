@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
 import { StorageAccessFramework, getInfoAsync as legacyGetInfoAsync } from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
 import { router, useNavigation } from "expo-router";
@@ -116,7 +117,7 @@ export default function BackupScreen() {
     }
   }, [isConfigured, settings.serverIp, settings.serverPort, settings.authToken]);
 
-  const pickFiles = useCallback(async () => {
+  const pickFromFiles = useCallback(async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         multiple: true,
@@ -140,6 +141,57 @@ export default function BackupScreen() {
       Alert.alert("File Picker Error", String(e));
     }
   }, [setSelectedFiles]);
+
+  const pickFromPhotos = useCallback(async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permission required", "Please allow access to your photo library in Settings.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images", "videos"],
+        allowsMultipleSelection: true,
+        quality: 1,
+        exif: false,
+      });
+      if (result.canceled) return;
+      const newFiles: SelectedFile[] = result.assets.map((a) => {
+        const filename = a.fileName ?? a.uri.split("/").pop() ?? "photo";
+        return {
+          uri: a.uri,
+          name: filename,
+          size: a.fileSize ?? 0,
+          mimeType: a.mimeType ?? "image/jpeg",
+        };
+      });
+      setSelectedFiles((prev) => {
+        const existingUris = new Set(prev.map((f) => f.uri));
+        return [...prev, ...newFiles.filter((f) => !existingUris.has(f.uri))];
+      });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (e) {
+      Alert.alert("Photo Picker Error", String(e));
+    }
+  }, [setSelectedFiles]);
+
+  const pickFiles = useCallback(() => {
+    if (Platform.OS === "ios") {
+      Alert.alert("Add files", "Where do you want to pick from?", [
+        {
+          text: "Photos & Videos",
+          onPress: pickFromPhotos,
+        },
+        {
+          text: "Files (iCloud / On My iPhone)",
+          onPress: pickFromFiles,
+        },
+        { text: "Cancel", style: "cancel" },
+      ]);
+    } else {
+      pickFromFiles();
+    }
+  }, [pickFromFiles, pickFromPhotos]);
 
   const pickFolder = useCallback(async () => {
     if (Platform.OS === "ios") {
