@@ -2,11 +2,17 @@
 /**
  * LAN Backup Companion Server
  *
- * Run this on your computer (requires Node.js 18+):
- *   node server.js
+ * First run — just execute:
+ *   node server.js          (Linux / macOS)
+ *   node server.js          (Windows — in a terminal)
+ *   bash install.sh         (Linux / macOS — installs Node.js if needed)
+ *   install.ps1             (Windows  — installs Node.js if needed)
  *
- * Or set the auth token via env:
- *   LB_TOKEN=mysecret node server.js
+ * A secure token is generated automatically on the first run, saved to .env,
+ * and printed to the console. Copy it into the app (Settings → Auth Token).
+ *
+ * Subsequent runs: the token is loaded from .env automatically.
+ * Manual override: set LB_TOKEN in the environment before starting.
  *
  * Security features:
  *  - Bearer token auth on all sensitive endpoints
@@ -25,19 +31,78 @@ const crypto = require("crypto");
 const os = require("os");
 const { execSync } = require("child_process");
 
+// ── .env loader ───────────────────────────────────────────────────────────────
+// Reads key=value pairs from .env (same folder as server.js) into process.env.
+// Variables already set in the environment take priority over .env values.
+const ENV_FILE = path.join(__dirname, ".env");
+
+function loadEnvFile() {
+  if (!fs.existsSync(ENV_FILE)) return;
+  for (const line of fs.readFileSync(ENV_FILE, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const val = trimmed.slice(eq + 1).trim();
+    if (key && !(key in process.env)) process.env[key] = val;
+  }
+}
+
+// ── First-run setup ───────────────────────────────────────────────────────────
+// Called when no token is found anywhere. Generates a token, writes .env,
+// and prints clear instructions for the user.
+function firstRunSetup() {
+  const token = crypto.randomBytes(16).toString("hex"); // 32 chars, 128-bit entropy
+  const defaultDir = path.join(os.homedir(), "LAN-Backup");
+  fs.writeFileSync(
+    ENV_FILE,
+    [
+      "# LAN Backup companion server — configuration",
+      `# Auto-generated: ${new Date().toISOString().slice(0, 10)}`,
+      "#",
+      "# IMPORTANT: copy LB_TOKEN into the LAN Backup app",
+      "#            Open the app → Settings tab → Auth Token field",
+      "#",
+      `LB_TOKEN=${token}`,
+      "",
+      "# Optional — remove the # to change a default:",
+      "# LB_PORT=7823",
+      `# LB_BACKUP_DIR=${defaultDir}`,
+    ].join("\n") + "\n",
+    "utf8"
+  );
+  process.env.LB_TOKEN = token;
+
+  const W = 60;
+  const row = (s) => "║ " + s.padEnd(W - 2) + " ║";
+  console.log("\n" + "╔" + "═".repeat(W) + "╗");
+  console.log(row("  LAN Backup — First-time Setup"));
+  console.log("╠" + "═".repeat(W) + "╣");
+  console.log(row(""));
+  console.log(row("  A secure token has been generated and saved to .env"));
+  console.log(row(""));
+  console.log(row("  Copy this token into the app:"));
+  console.log(row("  App → Settings tab → Auth Token field"));
+  console.log(row(""));
+  console.log(row(`  Token:  ${token}`));
+  console.log(row(""));
+  console.log(row("  The token is saved in .env and reused on every start."));
+  console.log(row("  To reset it, delete .env and restart the server."));
+  console.log(row(""));
+  console.log("╚" + "═".repeat(W) + "╝\n");
+}
+
+loadEnvFile();
+if (!process.env.LB_TOKEN) firstRunSetup();
+
 // ── Configuration ────────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.LB_PORT || "7823", 10);
-const AUTH_TOKEN = process.env.LB_TOKEN || "";
-const BACKUP_ROOT = process.env.LB_BACKUP_DIR || path.join(process.env.HOME || os.homedir(), "LAN-Backup");
+const AUTH_TOKEN = process.env.LB_TOKEN;
+const BACKUP_ROOT = process.env.LB_BACKUP_DIR || path.join(os.homedir(), "LAN-Backup");
 const SERVER_ID_FILE = path.join(__dirname, ".server-id");
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 600; // 10 uploads/sec sustained — protects against DoS while allowing bulk backups
-
-if (!AUTH_TOKEN) {
-  console.error("⚠️  No auth token set! Set LB_TOKEN environment variable.");
-  console.error("   Example: LB_TOKEN=mysecrettoken node server.js");
-  process.exit(1);
-}
 
 // Ensure backup root exists
 fs.mkdirSync(BACKUP_ROOT, { recursive: true });

@@ -17,21 +17,28 @@ The app runs inside **Expo Go**, a free shell available on both iOS and Android.
 
 ### Open LAN Backup
 
-1. Open Expo Go on your phone.
-2. Tap **"Enter URL manually"** and type:
-   ```
-   exp://6ea29a26-a374-4b67-ac7b-a6eb0c7421ee-00-5bkvdz56o8j4.expo.kirk.replit.dev
-   ```
-3. The app will load. The first time may take a few seconds.
+**On Android:** open Expo Go and the app should appear automatically under "Development servers". If not, tap **Enter URL manually**.
+
+**On iOS:** open **Safari** and type the address below — Safari will offer to open it in Expo Go:
+
+```
+exp://6ea29a26-a374-4b67-ac7b-a6eb0c7421ee-00-5bkvdz56o8j4.expo.kirk.replit.dev
+```
+
+Or scan this QR code with the iPhone camera:
+
+> 📷 [Download QR code](../attached_assets/expo-qr.png)
+
+The app will load. The first time may take a few seconds.
 
 > **Note:** both your phone and your computer must be on the same Wi-Fi network for transfers to work.
 
-### First-time setup
+### First-time setup in the app
 
 Once the app is open, go to the **Settings** tab:
 
-1. Tap **"Detect computers on this network"** — the app will scan your Wi-Fi and list any computers running the companion server. Tap your computer to fill in its IP automatically.
-2. Enter the **auth token** — must match the `LB_TOKEN` you set when starting the server.
+1. Tap **"Detect computers on this network"** — the app scans your Wi-Fi and lists any computers running the companion server. Tap your computer to fill in its address automatically.
+2. Enter the **auth token** shown when you started the server (see Part 2 below).
 3. Optionally adjust the **Target Folder** name (default: `backup`).
 4. Tap **Save Settings**, then **Test Connection** to confirm everything works.
 
@@ -54,42 +61,99 @@ The **⊡** button in the action bar lets you compress photos before they are se
 
 ## Part 2 — Companion server (your computer)
 
-A lightweight Node.js HTTP server that receives files from the app.
+A lightweight Node.js server that runs on your computer and receives files from the app.
 
-## Requirements
+### Quick Install
 
-- Node.js 18 or later
-- macOS, Linux, or Windows
+Download the `companion-server` folder to your computer, then run the installer for your platform:
 
-## Quick Start
+#### macOS / Linux
+
+Open **Terminal**, navigate to the `companion-server` folder, and run:
 
 ```bash
-# Set your auth token (required)
-export LB_TOKEN=your_secret_token_here
-
-# Run the server
-node server.js
+bash install.sh
 ```
 
-On Windows:
-```cmd
-set LB_TOKEN=your_secret_token_here
-node server.js
+This installs Node.js automatically if it is not already present, then starts the server.
+
+#### Windows
+
+Right-click **`install.ps1`** and choose **"Run with PowerShell"**.
+
+If Windows shows a blue security warning, click **"Open anyway"** — the script is safe and only installs Node.js and starts the server.
+
+> **Tip — execution policy:** if PowerShell refuses to run the script, open PowerShell as Administrator and run:
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+> Then try again.
+
+---
+
+### First run
+
+The very first time the server starts it will:
+
+1. Generate a secure random auth token.
+2. Save it to a file called **`.env`** in the same folder (so you never need to set it manually again).
+3. Print it clearly in the terminal — copy it into the app under **Settings → Auth Token**.
+
+```
+╔════════════════════════════════════════════════════════════╗
+║  LAN Backup — First-time Setup                             ║
+╠════════════════════════════════════════════════════════════╣
+║                                                            ║
+║  A secure token has been generated and saved to .env       ║
+║                                                            ║
+║  Copy this token into the app:                             ║
+║  App → Settings tab → Auth Token field                     ║
+║                                                            ║
+║  Token:  a1b2c3d4e5f6...                                   ║
+║                                                            ║
+║  The token is saved in .env and reused on every start.     ║
+║  To reset it, delete .env and restart the server.          ║
+║                                                            ║
+╚════════════════════════════════════════════════════════════╝
 ```
 
-## Configuration
+From the second run onwards, just run the installer again (or `node server.js`) — the token is loaded from `.env` automatically.
 
-| Environment Variable | Default | Description |
+---
+
+### Subsequent starts
+
+| Platform | Command |
+|---|---|
+| macOS / Linux | `bash install.sh` (or `node server.js` once Node.js is installed) |
+| Windows | Double-click `install.ps1` (or run `node server.js` in a terminal) |
+
+---
+
+### Configuration (optional)
+
+All settings live in the **`.env`** file created on first run. Open it in any text editor:
+
+| Setting | Default | Description |
 |---|---|---|
-| `LB_TOKEN` | *(required)* | Auth token — must match what you set in the app |
-| `LB_PORT` | `7823` | Port to listen on |
-| `LB_BACKUP_DIR` | `~/LAN-Backup` | Root directory where uploaded files are stored |
+| `LB_TOKEN` | *(auto-generated)* | Auth token — must match what you enter in the app |
+| `LB_PORT` | `7823` | Port the server listens on |
+| `LB_BACKUP_DIR` | `~/LAN-Backup` | Root folder where uploaded files are stored |
 
-## What gets saved where
+To change a setting, remove the `#` at the start of the line and edit the value, then restart the server.
 
-Files are saved under `LB_BACKUP_DIR / <Target Folder> / <relative path>`.
+You can also override settings by passing environment variables before `node server.js`:
 
-When you back up a folder from the app, the full directory structure is recreated on your computer. For example, if you select a folder called `Camera` containing a sub-folder `Screenshots`, the server will create:
+```bash
+LB_PORT=8000 node server.js        # macOS / Linux
+set LB_PORT=8000 && node server.js # Windows cmd
+```
+
+---
+
+### What gets saved where
+
+Files are stored under `LB_BACKUP_DIR / <Target Folder> / <relative path>`.
+
+When you back up a folder from the app, the full directory structure is recreated on your computer:
 
 ```
 ~/LAN-Backup/
@@ -102,13 +166,7 @@ When you back up a folder from the app, the full directory structure is recreate
 
 Individual files picked without a folder are saved flat inside the Target Folder.
 
-## Security Features
-
-- **Bearer token auth** on all file-sensitive endpoints
-- **Rate limiting** — max 600 requests per minute per IP (supports bulk folder backups)
-- **SHA-256 checksum** computed for every received file (returned in the response)
-- **Path traversal protection** — every path segment is validated; `../` escapes are rejected
-- **TOFU fingerprint** — a unique server ID is generated on first run and returned on `/ping`, allowing the app to detect server impersonation
+---
 
 ## Restore — Desktop to Phone (unlockable feature)
 
@@ -135,7 +193,23 @@ You can also send files **from your computer to your phone** using the **Restore
 
 ---
 
-## Endpoints
+## Security
+
+- **Bearer token auth** on all file-sensitive endpoints
+- **Rate limiting** — max 600 requests per minute per IP
+- **SHA-256 checksum** computed for every received file
+- **Path traversal protection** — every path segment is validated; `../` escapes are rejected
+- **TOFU fingerprint** — a unique server ID is generated on first run; the app alerts you if it ever changes (possible impersonation)
+
+### Recommendations
+
+1. **Use on trusted networks only** — this server uses plain HTTP and is designed for home LAN use.
+2. **Don't expose to the internet** — run the server only while doing backups.
+3. **Firewall** — consider restricting port 7823 to your LAN subnet only.
+
+---
+
+## API reference
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
@@ -144,23 +218,6 @@ You can also send files **from your computer to your phone** using the **Restore
 | `POST` | `/upload` | Yes | Accepts a file upload (phone → desktop) |
 | `GET` | `/export/list` | Yes | Lists files available in the `export/` folder |
 | `GET` | `/export/file?name=x` | Yes | Downloads one file from `export/` to the phone |
-
-### Upload fields
-
-| Field | Required | Description |
-|---|---|---|
-| `file` | Yes | The file binary (multipart) |
-| `targetFolder` | Yes | Sub-folder name inside the backup root |
-| `filename` | Yes | File name to save as |
-| `relativePath` | No | Full relative path including folder structure (e.g. `Camera/Screenshots/screen1.png`). When present, the directory tree is recreated automatically. |
-
-## Security Recommendations
-
-1. **Use on trusted networks only** — this server uses plain HTTP (no TLS) and is designed for home LAN use.
-2. **Set a strong auth token** — at least 20 random characters.
-3. **Don't expose to the internet** — keep the server running only while doing backups; stop it when done.
-4. **Firewall** — consider restricting the port (7823) to your LAN subnet only.
-5. **Check the terminal logs** — every upload is logged with filename, size, and checksum.
 
 ---
 
