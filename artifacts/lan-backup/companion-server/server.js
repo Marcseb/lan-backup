@@ -471,6 +471,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log("╚═══════════════════════════════════════════╝");
   console.log(`  Listening on port : ${PORT}`);
   console.log(`  Backup directory  : ${BACKUP_ROOT}`);
+  console.log(`  Auth token        : ${AUTH_TOKEN}`);
   console.log(`  Server ID (TOFU)  : ${SERVER_ID}`);
   console.log(`  LAN IP addresses  :`);
   const nets = os.networkInterfaces();
@@ -481,6 +482,9 @@ server.listen(PORT, "0.0.0.0", () => {
       }
     }
   }
+  console.log("─────────────────────────────────────────────");
+  console.log("  Copy the auth token above into the app:");
+  console.log("  App → Settings tab → Auth Token field");
   console.log("─────────────────────────────────────────────");
   console.log("  Press Ctrl+C to stop");
 });
