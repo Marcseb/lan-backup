@@ -66,7 +66,7 @@ A lightweight Node.js server that runs on your computer and receives files from 
 ### Quick Install
 
 Download the `artifacts/lan-backup/companion-server` folder to your computer, then run the installer for your platform:
-
+(To download a folder from GitHub, navigate to your desired repository, select the folder you want to download from GitHub, copy the URL, navigate to https://download-directory.github.io/ and paste the URL into the text box, and hit enter .)
 #### macOS / Linux
 
 Open **Terminal**, navigate to the `companion-server` folder, and run:
