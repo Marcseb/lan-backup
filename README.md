@@ -65,23 +65,41 @@ A lightweight Node.js server that runs on your computer and receives files from 
 
 ### Quick Install
 
-Download the `artifacts/lan-backup/companion-server` folder to your computer, then run the installer for your platform:
+Create a folder anywhere on your computer (e.g. `LAN_backup`), download the setup file for your platform into that folder, and run it — everything else is automatic.
 
-#### macOS / Linux
+| Platform | Download |
+|---|---|
+| **Linux / macOS** | [setup.sh](https://github.com/Marcseb/lan-backup/releases/latest/download/companion-server.zip) — right-click → Save link as… then `bash setup.sh` |
+| **Windows** | [setup.ps1](https://github.com/Marcseb/lan-backup/releases/latest/download/companion-server.zip) — right-click → Run with PowerShell |
 
-Open **Terminal**, navigate to the `companion-server` folder, and run:
+> The setup script downloads the companion server automatically, installs Node.js if needed, and starts the server. You only need to do this once.
 
-```bash
-bash install.sh
-```
+#### Linux / macOS — step by step
 
-This installs Node.js automatically if it is not already present, then starts the server.
+1. Create a folder: `mkdir ~/LAN_backup && cd ~/LAN_backup`
+2. Download the setup file:
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.sh -o setup.sh
+   ```
+3. Run it:
+   ```bash
+   bash setup.sh
+   ```
 
-#### Windows
+#### Windows — step by step
 
-Right-click **`install.ps1`** and choose **"Run with PowerShell"**.
+1. Create a folder, e.g. `C:\LAN_backup`.
+2. Open PowerShell, navigate to the folder:
+   ```powershell
+   cd C:\LAN_backup
+   ```
+3. Download and run the setup script:
+   ```powershell
+   Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1
+   .\setup.ps1
+   ```
 
-If Windows shows a blue security warning, click **"Open anyway"** — the script is safe and only installs Node.js and starts the server.
+If Windows shows a blue security warning, click **"Open anyway"**.
 
 > **Tip — execution policy:** if PowerShell refuses to run the script, open PowerShell as Administrator and run:
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
