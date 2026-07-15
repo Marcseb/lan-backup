@@ -14,28 +14,31 @@
 #   3. Installs Node.js if needed, then starts the server.
 #   4. Sets the backup directory to THIS folder (where setup.ps1 lives).
 
-$ErrorActionPreference = "Stop"
+# NOTE: no $ErrorActionPreference = "Stop" here — we handle errors explicitly
+# so the window stays open on failure and the user can read the message.
 
-# Keep the window open on any unexpected error so the user can read it.
-trap {
+$ReleaseUrl = "https://github.com/Marcseb/lan-backup/releases/latest/download/companion-server.zip"
+
+# Resolve the folder this script lives in.
+$DestDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+if ([string]::IsNullOrEmpty($DestDir)) { $DestDir = (Get-Location).Path }
+
+$ZipPath       = Join-Path $DestDir "companion-server.zip"
+$ServerDir     = Join-Path $DestDir "companion-server"
+$InstallScript = Join-Path $ServerDir "install.ps1"
+
+function Bail($msg) {
     Write-Host ""
-    Write-Host "  ERROR: $_" -ForegroundColor Red
+    Write-Host "  ERROR: $msg" -ForegroundColor Red
     Write-Host ""
     Read-Host "  Press Enter to close"
     exit 1
 }
 
-$ReleaseUrl    = "https://github.com/Marcseb/lan-backup/releases/latest/download/companion-server.zip"
-$DestDir       = Split-Path -Parent $MyInvocation.MyCommand.Definition
-if (-not $DestDir) { $DestDir = $PWD.Path }   # fallback when run from a pipe
-$ZipPath       = Join-Path $DestDir "companion-server.zip"
-$ServerDir     = Join-Path $DestDir "companion-server"
-$InstallScript = Join-Path $ServerDir "install.ps1"
-
 Write-Host ""
-Write-Host "╔══════════════════════════════════════════════╗"
-Write-Host "║        LAN Backup — Setup (Windows)         ║"
-Write-Host "╚══════════════════════════════════════════════╝"
+Write-Host "=============================================="
+Write-Host "   LAN Backup -- Setup (Windows)"
+Write-Host "=============================================="
 Write-Host ""
 Write-Host "  Backup folder : $DestDir"
 Write-Host ""
@@ -48,8 +51,7 @@ if (Test-Path (Join-Path $ServerDir "server.js")) {
     Write-Host "  Companion server already installed."
     Write-Host "  Starting it now..."
     Write-Host ""
-    # Unblock in case Windows re-marks files after an update
-    Get-ChildItem $ServerDir | Unblock-File -ErrorAction SilentlyContinue
+    Get-ChildItem $ServerDir -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
     powershell.exe -ExecutionPolicy Bypass -File $InstallScript
     exit
 }
@@ -59,14 +61,18 @@ Write-Host "  Downloading companion server..."
 
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri $ReleaseUrl -OutFile $ZipPath -UseBasicParsing
 } catch {
-    Write-Host ""
-    Write-Host "  ERROR: Download failed: $_" -ForegroundColor Red
-    Write-Host "         Check your internet connection and try again."
-    Write-Host ""
-    Read-Host "  Press Enter to close"
-    exit 1
+    # Not fatal — proceed with the default TLS setting
+}
+
+try {
+    Invoke-WebRequest -Uri $ReleaseUrl -OutFile $ZipPath -UseBasicParsing -ErrorAction Stop
+} catch {
+    Bail "Download failed: $_`n  Check your internet connection and try again."
+}
+
+if (-not (Test-Path $ZipPath)) {
+    Bail "Download appeared to succeed but companion-server.zip was not saved to:`n  $ZipPath`n  Check write permissions for that folder."
 }
 
 Write-Host "  Download complete."
@@ -75,27 +81,28 @@ Write-Host "  Download complete."
 Write-Host "  Extracting..."
 
 try {
-    Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+    Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force -ErrorAction Stop
 } catch {
-    Write-Host ""
-    Write-Host "  ERROR: Extraction failed: $_" -ForegroundColor Red
-    Write-Host ""
     Remove-Item -Path $ZipPath -ErrorAction SilentlyContinue
-    Read-Host "  Press Enter to close"
-    exit 1
+    Bail "Extraction failed: $_"
 }
 
 Remove-Item -Path $ZipPath -ErrorAction SilentlyContinue
+
+if (-not (Test-Path $InstallScript)) {
+    Bail "Extraction finished but install.ps1 was not found at:`n  $InstallScript`n  The zip may be corrupt — delete the companion-server folder and try again."
+}
+
 Write-Host "  Extracted to: $ServerDir"
 
 # ── Unblock extracted files ───────────────────────────────────────────────────
-# Files from a downloaded zip are tagged by Windows as internet-zone and blocked
-# by PowerShell's execution policy.  Unblock-File removes that tag.
+# Files from a downloaded zip carry a Windows "internet zone" mark that
+# causes PowerShell to block them.  Unblock-File removes that mark.
 Write-Host "  Unblocking extracted files..."
-Get-ChildItem $ServerDir | Unblock-File -ErrorAction SilentlyContinue
+Get-ChildItem $ServerDir -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
 Write-Host ""
 
 # ── Run installer ─────────────────────────────────────────────────────────────
-# Use -ExecutionPolicy Bypass so Windows cannot block the script even if
-# Unblock-File was insufficient (e.g. restricted group policy).
+# -ExecutionPolicy Bypass ensures the script runs even if Unblock-File
+# was not sufficient (e.g. restricted group policy).
 powershell.exe -ExecutionPolicy Bypass -File $InstallScript
