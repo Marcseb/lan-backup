@@ -65,45 +65,35 @@ A lightweight Node.js server that runs on your computer and receives files from 
 
 ### Quick Install
 
-Create a folder anywhere on your computer (e.g. `LAN_backup`), download the setup file for your platform into that folder, and run it — everything else is automatic.
+#### Linux / macOS
 
-| Platform | Download |
-|---|---|
-| **Linux / macOS** | [setup.sh](https://github.com/Marcseb/lan-backup/raw/main/setup.sh) — save the file, then `bash setup.sh` |
-| **Windows** | [setup.ps1](https://github.com/Marcseb/lan-backup/raw/main/setup.ps1) — right-click → Run with PowerShell |
+Open a **Terminal**, create a folder for the server, and paste this single command:
 
-> The setup script downloads the companion server automatically, installs Node.js if needed, and starts the server. You only need to do this once.
+```bash
+mkdir -p ~/LAN_backup && cd ~/LAN_backup && curl -fsSL https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.sh | bash
+```
 
-#### Linux / macOS — step by step
+That's it. The script downloads the companion server, installs Node.js if needed, and starts everything automatically.
 
-1. Create a folder: `mkdir ~/LAN_backup && cd ~/LAN_backup`
-2. Download the setup file:
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.sh -o setup.sh
-   ```
-3. Run it:
-   ```bash
-   bash setup.sh
-   ```
+> To restart the server later, run the same command again — it detects that the companion server is already installed and just starts it.
 
-#### Windows — step by step
+#### Windows
 
 1. Create a folder, e.g. `C:\LAN_backup`.
-2. Open PowerShell, navigate to the folder:
-   ```powershell
-   cd C:\LAN_backup
-   ```
-3. Download and run the setup script:
-   ```powershell
-   Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1
-   .\setup.ps1
-   ```
+2. Download [setup.ps1](https://github.com/Marcseb/lan-backup/raw/main/setup.ps1) into that folder.
+3. Right-click `setup.ps1` → **Run with PowerShell**.
 
 If Windows shows a blue security warning, click **"Open anyway"**.
 
 > **Tip — execution policy:** if PowerShell refuses to run the script, open PowerShell as Administrator and run:
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
 > Then try again.
+
+Alternatively, open PowerShell in your folder and paste this single command:
+
+```powershell
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; .\setup.ps1
+```
 
 ---
 
