@@ -69,8 +69,8 @@ Create a folder anywhere on your computer (e.g. `LAN_backup`), download the setu
 
 | Platform | Download |
 |---|---|
-| **Linux / macOS** | [setup.sh](https://github.com/Marcseb/lan-backup/releases/latest/download/companion-server.zip) — right-click → Save link as… then `bash setup.sh` |
-| **Windows** | [setup.ps1](https://github.com/Marcseb/lan-backup/releases/latest/download/companion-server.zip) — right-click → Run with PowerShell |
+| **Linux / macOS** | [setup.sh](https://github.com/Marcseb/lan-backup/raw/main/setup.sh) — save the file, then `bash setup.sh` |
+| **Windows** | [setup.ps1](https://github.com/Marcseb/lan-backup/raw/main/setup.ps1) — right-click → Run with PowerShell |
 
 > The setup script downloads the companion server automatically, installs Node.js if needed, and starts the server. You only need to do this once.
 

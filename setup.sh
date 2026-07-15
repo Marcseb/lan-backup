@@ -13,7 +13,7 @@
 
 set -e
 
-RELEASE_URL="https://github.com/Marcseb/lan-backup/releases/latest/download/companion-server.zip"
+RELEASE_URL="https://github.com/Marcseb/lan-backup/releases/latest/download/companion-server.tar.gz"
 DEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo ""
@@ -34,9 +34,9 @@ fi
 echo "  Downloading companion server..."
 
 if command -v curl &>/dev/null; then
-  curl -fsSL "$RELEASE_URL" -o "$DEST_DIR/companion-server.zip"
+  curl -fsSL "$RELEASE_URL" -o "$DEST_DIR/companion-server.tar.gz"
 elif command -v wget &>/dev/null; then
-  wget -q "$RELEASE_URL" -O "$DEST_DIR/companion-server.zip"
+  wget -q "$RELEASE_URL" -O "$DEST_DIR/companion-server.tar.gz"
 else
   echo ""
   echo "  ❌  Neither curl nor wget found."
@@ -47,30 +47,10 @@ fi
 
 echo "  ✅  Download complete."
 
-# ── Extract ───────────────────────────────────────────────────────────────────
+# ── Extract (tar is available on every Linux and macOS system) ────────────────
 echo "  Extracting..."
-
-if command -v unzip &>/dev/null; then
-  unzip -q "$DEST_DIR/companion-server.zip" -d "$DEST_DIR"
-else
-  # Fallback: use Python (available on virtually every Linux/macOS system)
-  if command -v python3 &>/dev/null; then
-    python3 -c "import zipfile, sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" \
-      "$DEST_DIR/companion-server.zip" "$DEST_DIR"
-  elif command -v python &>/dev/null; then
-    python -c "import zipfile, sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" \
-      "$DEST_DIR/companion-server.zip" "$DEST_DIR"
-  else
-    echo ""
-    echo "  ❌  Could not find unzip or python to extract the archive."
-    echo "      Please install unzip and try again:  sudo apt install unzip"
-    echo ""
-    rm -f "$DEST_DIR/companion-server.zip"
-    exit 1
-  fi
-fi
-
-rm -f "$DEST_DIR/companion-server.zip"
+tar -xzf "$DEST_DIR/companion-server.tar.gz" -C "$DEST_DIR"
+rm -f "$DEST_DIR/companion-server.tar.gz"
 echo "  ✅  Extracted to: $DEST_DIR/companion-server"
 
 # ── Run installer ─────────────────────────────────────────────────────────────
