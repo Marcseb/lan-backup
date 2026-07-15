@@ -1,25 +1,32 @@
 #!/usr/bin/env bash
 # LAN Backup — Setup (Linux & macOS)
 #
-# Place this file in the folder where you want the companion server to live
-# (e.g. ~/LAN_backup), then run:
+# Quickest install — paste this into a terminal:
 #
-#   bash setup.sh
+#   mkdir -p ~/LAN_backup && cd ~/LAN_backup && \
+#   curl -fsSL https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.sh | bash
 #
 # What this does:
 #   1. Downloads the companion server from GitHub.
 #   2. Extracts it into a "companion-server" sub-folder here.
 #   3. Installs Node.js if needed, then starts the server.
+#   4. Sets the backup directory to THIS folder (where you ran the command).
 
 set -e
 
 RELEASE_URL="https://github.com/Marcseb/lan-backup/releases/latest/download/companion-server.tar.gz"
-DEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Capture the working directory *before* any cd.
+# Works both when piped via "curl | bash" and when run as "bash setup.sh".
+SETUP_DIR="$(pwd)"
+DEST_DIR="$SETUP_DIR"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
 echo "║       LAN Backup — Setup (Linux / macOS)    ║"
 echo "╚══════════════════════════════════════════════╝"
+echo ""
+echo "  Backup folder : $SETUP_DIR"
 echo ""
 
 # ── Check for already-installed companion server ──────────────────────────────
@@ -27,6 +34,7 @@ if [[ -f "$DEST_DIR/companion-server/server.js" ]]; then
   echo "  ✅  Companion server already installed."
   echo "      Starting it now..."
   echo ""
+  export LB_BACKUP_DIR="$SETUP_DIR"
   exec bash "$DEST_DIR/companion-server/install.sh"
 fi
 
@@ -53,6 +61,7 @@ tar -xzf "$DEST_DIR/companion-server.tar.gz" -C "$DEST_DIR"
 rm -f "$DEST_DIR/companion-server.tar.gz"
 echo "  ✅  Extracted to: $DEST_DIR/companion-server"
 
-# ── Run installer ─────────────────────────────────────────────────────────────
+# ── Run installer (pass backup dir so it is saved to .env on first run) ───────
 echo ""
+export LB_BACKUP_DIR="$SETUP_DIR"
 exec bash "$DEST_DIR/companion-server/install.sh"

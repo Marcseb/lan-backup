@@ -55,6 +55,11 @@ function loadEnvFile() {
 function firstRunSetup() {
   const token = crypto.randomBytes(16).toString("hex"); // 32 chars, 128-bit entropy
   const defaultDir = path.join(os.homedir(), "LAN-Backup");
+  // If the setup script passed LB_BACKUP_DIR via env, persist it in .env so
+  // future runs (e.g. "node server.js" directly) also use the right folder.
+  const backupDirLine = process.env.LB_BACKUP_DIR
+    ? `LB_BACKUP_DIR=${process.env.LB_BACKUP_DIR}`
+    : `# LB_BACKUP_DIR=${defaultDir}`;
   fs.writeFileSync(
     ENV_FILE,
     [
@@ -68,7 +73,7 @@ function firstRunSetup() {
       "",
       "# Optional — remove the # to change a default:",
       "# LB_PORT=7823",
-      `# LB_BACKUP_DIR=${defaultDir}`,
+      backupDirLine,
     ].join("\n") + "\n",
     "utf8"
   );
