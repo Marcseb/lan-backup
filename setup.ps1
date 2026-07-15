@@ -16,8 +16,18 @@
 
 $ErrorActionPreference = "Stop"
 
+# Keep the window open on any unexpected error so the user can read it.
+trap {
+    Write-Host ""
+    Write-Host "  ERROR: $_" -ForegroundColor Red
+    Write-Host ""
+    Read-Host "  Press Enter to close"
+    exit 1
+}
+
 $ReleaseUrl    = "https://github.com/Marcseb/lan-backup/releases/latest/download/companion-server.zip"
 $DestDir       = Split-Path -Parent $MyInvocation.MyCommand.Definition
+if (-not $DestDir) { $DestDir = $PWD.Path }   # fallback when run from a pipe
 $ZipPath       = Join-Path $DestDir "companion-server.zip"
 $ServerDir     = Join-Path $DestDir "companion-server"
 $InstallScript = Join-Path $ServerDir "install.ps1"
@@ -30,15 +40,17 @@ Write-Host ""
 Write-Host "  Backup folder : $DestDir"
 Write-Host ""
 
-# ── Set backup dir env var so server.js saves it to .env on first run ─────────
+# Pass the backup folder to the server so it is written to .env on first run.
 $env:LB_BACKUP_DIR = $DestDir
 
 # ── Already installed? ────────────────────────────────────────────────────────
 if (Test-Path (Join-Path $ServerDir "server.js")) {
-    Write-Host "  ✅  Companion server already installed."
-    Write-Host "      Starting it now..."
+    Write-Host "  Companion server already installed."
+    Write-Host "  Starting it now..."
     Write-Host ""
-    & $InstallScript
+    # Unblock in case Windows re-marks files after an update
+    Get-ChildItem $ServerDir | Unblock-File -ErrorAction SilentlyContinue
+    powershell.exe -ExecutionPolicy Bypass -File $InstallScript
     exit
 }
 
@@ -46,19 +58,18 @@ if (Test-Path (Join-Path $ServerDir "server.js")) {
 Write-Host "  Downloading companion server..."
 
 try {
-    # Use TLS 1.2+ (required by GitHub)
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Invoke-WebRequest -Uri $ReleaseUrl -OutFile $ZipPath -UseBasicParsing
 } catch {
     Write-Host ""
-    Write-Host "  ❌  Download failed: $_"
-    Write-Host "      Check your internet connection and try again."
+    Write-Host "  ERROR: Download failed: $_" -ForegroundColor Red
+    Write-Host "         Check your internet connection and try again."
     Write-Host ""
     Read-Host "  Press Enter to close"
     exit 1
 }
 
-Write-Host "  ✅  Download complete."
+Write-Host "  Download complete."
 
 # ── Extract ───────────────────────────────────────────────────────────────────
 Write-Host "  Extracting..."
@@ -67,7 +78,7 @@ try {
     Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
 } catch {
     Write-Host ""
-    Write-Host "  ❌  Extraction failed: $_"
+    Write-Host "  ERROR: Extraction failed: $_" -ForegroundColor Red
     Write-Host ""
     Remove-Item -Path $ZipPath -ErrorAction SilentlyContinue
     Read-Host "  Press Enter to close"
@@ -75,8 +86,16 @@ try {
 }
 
 Remove-Item -Path $ZipPath -ErrorAction SilentlyContinue
-Write-Host "  ✅  Extracted to: $ServerDir"
+Write-Host "  Extracted to: $ServerDir"
+
+# ── Unblock extracted files ───────────────────────────────────────────────────
+# Files from a downloaded zip are tagged by Windows as internet-zone and blocked
+# by PowerShell's execution policy.  Unblock-File removes that tag.
+Write-Host "  Unblocking extracted files..."
+Get-ChildItem $ServerDir | Unblock-File -ErrorAction SilentlyContinue
 Write-Host ""
 
 # ── Run installer ─────────────────────────────────────────────────────────────
-& $InstallScript
+# Use -ExecutionPolicy Bypass so Windows cannot block the script even if
+# Unblock-File was insufficient (e.g. restricted group policy).
+powershell.exe -ExecutionPolicy Bypass -File $InstallScript
