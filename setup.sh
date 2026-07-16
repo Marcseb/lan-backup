@@ -30,8 +30,8 @@ echo "  Backup folder : $SETUP_DIR"
 echo ""
 
 # -- Desktop shortcut ---------------------------------------------------------
-# Creates a one-click launcher on the Desktop so the user never needs to
-# remember the terminal command to restart the server.
+# Always (re)creates the shortcut so that reinstalls or moves to a new folder
+# update the shortcut to the correct path.
 create_shortcut() {
   local OS
   OS="$(uname -s)"
@@ -42,40 +42,38 @@ create_shortcut() {
   if [[ "$OS" == "Darwin" ]]; then
     # macOS: a .command file is double-clickable in Finder and opens Terminal.
     local SHORTCUT="$DESKTOP/Start LAN Backup Server.command"
-    if [[ ! -f "$SHORTCUT" ]]; then
-      if [[ -d "$DESKTOP" ]]; then
-        cat > "$SHORTCUT" << ENDSCRIPT
+    if [[ -d "$DESKTOP" ]]; then
+      cat > "$SHORTCUT" << ENDSCRIPT
 #!/usr/bin/env bash
 cd "$SETUP_DIR"
 bash companion-server/install.sh
 ENDSCRIPT
-        chmod +x "$SHORTCUT"
-        echo "  Desktop shortcut created:"
-        echo "  $SHORTCUT"
-      fi
+      chmod +x "$SHORTCUT"
+      echo "  Desktop shortcut created/updated:"
+      echo "  $SHORTCUT"
     fi
 
   elif [[ "$OS" == "Linux" ]]; then
     # Linux: XDG .desktop file -- recognised by GNOME, KDE, XFCE, etc.
     # Uses "bash -lc" (login shell) so ~/.bash_profile is sourced and NVM /
-    # other Node version managers are on the PATH.
+    # other Node version managers are on PATH.
+    # LB_BACKUP_DIR is embedded directly so the correct folder is always used,
+    # even if .env is missing or was regenerated.
     local SHORTCUT="$DESKTOP/lan-backup-server.desktop"
-    if [[ ! -f "$SHORTCUT" ]]; then
-      if [[ -d "$DESKTOP" ]]; then
-        cat > "$SHORTCUT" << ENDDESKTOP
+    if [[ -d "$DESKTOP" ]]; then
+      cat > "$SHORTCUT" << ENDDESKTOP
 [Desktop Entry]
 Type=Application
 Name=LAN Backup Server
 Comment=Start the LAN Backup companion server
-Exec=bash -lc "cd '$SETUP_DIR' && bash companion-server/install.sh; exec bash"
+Exec=bash -lc "cd '$SETUP_DIR' && LB_BACKUP_DIR='$SETUP_DIR' bash companion-server/install.sh; exec bash"
 Terminal=true
 Icon=network-server
 Categories=Network;
 ENDDESKTOP
-        chmod +x "$SHORTCUT"
-        echo "  Desktop shortcut created:"
-        echo "  $SHORTCUT"
-      fi
+      chmod +x "$SHORTCUT"
+      echo "  Desktop shortcut created/updated:"
+      echo "  $SHORTCUT"
     fi
   fi
 }
