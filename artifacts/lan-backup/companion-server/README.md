@@ -149,6 +149,49 @@ set LB_PORT=8000 && node server.js # Windows cmd
 
 ---
 
+### Changing the auth token
+
+The auth token is stored in the **`.env`** file inside the `companion-server` folder. Here is how to update it on each platform:
+
+#### macOS / Linux
+
+1. Open **Terminal**.
+2. Navigate to the companion-server folder:
+   ```bash
+   cd ~/LAN_backup/companion-server
+   ```
+3. Open `.env` in a text editor — for example:
+   ```bash
+   nano .env          # simple terminal editor (save with Ctrl+O, exit with Ctrl+X)
+   # or
+   open -e .env       # macOS TextEdit
+   # or
+   gedit .env         # Linux GNOME
+   ```
+4. Find the line that starts with `LB_TOKEN=` and replace the value with your new token:
+   ```
+   LB_TOKEN=my-new-secret-token
+   ```
+5. Save the file, then restart the server (`bash install.sh` or the desktop shortcut).
+6. Open the app → **Settings** tab → update **Auth Token** to match → tap **Save Settings**.
+
+#### Windows
+
+1. Open **File Explorer** and navigate to the `companion-server` folder (e.g. `C:\Users\YourName\LAN_backup\companion-server`).
+2. The `.env` file may be hidden. If you cannot see it:
+   - In File Explorer, click **View** → tick **Hidden items**.
+3. Right-click **`.env`** → **Open with** → choose **Notepad** (or any text editor).
+4. Find the line that starts with `LB_TOKEN=` and replace the value:
+   ```
+   LB_TOKEN=my-new-secret-token
+   ```
+5. Save the file (**Ctrl + S**), then restart the server (double-click `install.ps1`).
+6. Open the app → **Settings** tab → update **Auth Token** to match → tap **Save Settings**.
+
+> **Tip — reset to a fresh token:** delete the `.env` file entirely and restart the server. A new random token will be generated and printed in the terminal.
+
+---
+
 ### What gets saved where
 
 Files are stored under `LB_BACKUP_DIR / <Target Folder> / <relative path>`.
