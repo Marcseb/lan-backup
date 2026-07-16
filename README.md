@@ -79,21 +79,18 @@ That's it. The script downloads the companion server, installs Node.js if needed
 
 #### Windows
 
-1. Create a folder, e.g. `C:\LAN_backup`.
-2. Download [setup.ps1](https://github.com/Marcseb/lan-backup/raw/main/setup.ps1) into that folder.
-3. Right-click `setup.ps1` → **Run with PowerShell**.
-
-If Windows shows a blue security warning, click **"Open anyway"**.
-
-> **Tip — execution policy:** if PowerShell refuses to run the script, open PowerShell as Administrator and run:
-> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
-> Then try again.
-
-Alternatively, open PowerShell in your folder and paste this single command:
+Open **PowerShell** in the folder where you want backups saved and paste this single command:
 
 ```powershell
-Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; .\setup.ps1
+mkdir C:\LAN_backup; cd C:\LAN_backup; Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; powershell.exe -ExecutionPolicy Bypass -File setup.ps1
 ```
+
+The `-ExecutionPolicy Bypass` flag is required because Windows blocks unsigned scripts downloaded from the internet — it is safe here and applies only to this one script.
+
+> **To restart the server later**, open PowerShell in `C:\LAN_backup` and run:
+> ```powershell
+> powershell.exe -ExecutionPolicy Bypass -File setup.ps1
+> ```
 
 ---
 

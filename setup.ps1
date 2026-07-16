@@ -4,9 +4,10 @@
 # (e.g. C:\LAN_backup), then right-click it and choose
 # "Run with PowerShell".
 #
-# Or paste this into a PowerShell window:
+# Or paste this into a PowerShell window (the -ExecutionPolicy Bypass flag is
+# required because Windows blocks unsigned scripts downloaded from the internet):
 #   mkdir C:\LAN_backup; cd C:\LAN_backup
-#   Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; .\setup.ps1
+#   Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; powershell.exe -ExecutionPolicy Bypass -File setup.ps1
 #
 # What this does:
 #   1. Downloads the companion server from GitHub.
