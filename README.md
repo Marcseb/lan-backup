@@ -73,7 +73,7 @@ A lightweight Node.js server that runs on your computer and receives files from 
 mkdir -p ~/LAN_backup && cd ~/LAN_backup && curl -fsSL https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.sh | bash
 ```
 
-The script downloads the companion server, installs Node.js if needed, and starts everything automatically.
+Replace `~/LAN_backup` with any folder you prefer, e.g. `~/Desktop/LAN_backup`. The script downloads the companion server, installs Node.js if needed, and starts everything automatically. Backup files will be saved in that same folder.
 
 > To restart later, run the same command again — it detects the server is already installed and just starts it.
 
@@ -82,12 +82,14 @@ The script downloads the companion server, installs Node.js if needed, and start
 > **Run this in PowerShell (Windows only — do not run in Terminal/bash)**
 
 ```powershell
-mkdir C:\LAN_backup; cd C:\LAN_backup; Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; powershell.exe -ExecutionPolicy Bypass -File setup.ps1
+mkdir ~\LAN_backup; cd ~\LAN_backup; Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; powershell.exe -ExecutionPolicy Bypass -File setup.ps1
 ```
+
+Replace `~\LAN_backup` with any folder you prefer, e.g. `~\Desktop\LAN_backup`. The `~` expands to your home directory (`C:\Users\YourName`). Backup files will be saved in that same folder.
 
 The `-ExecutionPolicy Bypass` flag is required because Windows blocks unsigned scripts downloaded from the internet — it is safe and applies only to this one script.
 
-> **To restart the server later**, open PowerShell in `C:\LAN_backup` and run:
+> **To restart the server later**, open PowerShell in your `LAN_backup` folder and run:
 > ```powershell
 > powershell.exe -ExecutionPolicy Bypass -File setup.ps1
 > ```
