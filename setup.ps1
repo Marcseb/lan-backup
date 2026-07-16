@@ -1,19 +1,16 @@
 # LAN Backup - Setup (Windows)
 #
-# Place this file in the folder where you want backups to be saved
-# (e.g. C:\LAN_backup), then right-click it and choose
-# "Run with PowerShell".
+# Paste this into a PowerShell window to install in your home folder:
+#   mkdir ~\LAN_backup; cd ~\LAN_backup; Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; powershell.exe -ExecutionPolicy Bypass -File setup.ps1
 #
-# Or paste this into a PowerShell window (the -ExecutionPolicy Bypass flag is
-# required because Windows blocks unsigned scripts downloaded from the internet):
-#   mkdir C:\LAN_backup; cd C:\LAN_backup
-#   Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; powershell.exe -ExecutionPolicy Bypass -File setup.ps1
+# Replace ~\LAN_backup with any folder you prefer, e.g. ~\Desktop\LAN_backup
 #
 # What this does:
 #   1. Downloads the companion server from GitHub.
 #   2. Extracts it into a "companion-server" sub-folder here.
 #   3. Installs Node.js if needed, then starts the server.
 #   4. Sets the backup directory to THIS folder (where setup.ps1 lives).
+#   5. Creates a desktop shortcut so you can start the server with one click.
 
 # NOTE: no $ErrorActionPreference = "Stop" here - we handle errors explicitly
 # so the window stays open on failure and the user can read the message.
@@ -36,6 +33,31 @@ function Bail($msg) {
     exit 1
 }
 
+# Creates a desktop shortcut (.lnk) that re-runs this setup.ps1.
+# Safe to call multiple times -- skips silently if the shortcut already exists.
+function Create-Shortcut {
+    $DesktopPath = [Environment]::GetFolderPath("Desktop")
+    if ([string]::IsNullOrEmpty($DesktopPath) -or -not (Test-Path $DesktopPath)) { return }
+
+    $ShortcutPath = Join-Path $DesktopPath "LAN Backup Server.lnk"
+    if (Test-Path $ShortcutPath) { return }
+
+    try {
+        $WshShell  = New-Object -ComObject WScript.Shell
+        $Shortcut  = $WshShell.CreateShortcut($ShortcutPath)
+        $Shortcut.TargetPath      = "powershell.exe"
+        $Shortcut.Arguments       = "-ExecutionPolicy Bypass -File `"$DestDir\setup.ps1`""
+        $Shortcut.WorkingDirectory = $DestDir
+        $Shortcut.Description     = "Start LAN Backup companion server"
+        $Shortcut.IconLocation    = "shell32.dll,22"
+        $Shortcut.Save()
+        Write-Host "  Desktop shortcut created:"
+        Write-Host "  $ShortcutPath"
+    } catch {
+        Write-Host "  (Could not create desktop shortcut: $_)"
+    }
+}
+
 Write-Host ""
 Write-Host "=============================================="
 Write-Host "   LAN Backup -- Setup (Windows)"
@@ -52,6 +74,7 @@ if (Test-Path (Join-Path $ServerDir "server.js")) {
     Write-Host "  Companion server already installed."
     Write-Host "  Starting it now..."
     Write-Host ""
+    Create-Shortcut
     Get-ChildItem $ServerDir -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
     powershell.exe -ExecutionPolicy Bypass -File $InstallScript
     exit
@@ -97,13 +120,12 @@ if (-not (Test-Path $InstallScript)) {
 Write-Host "  Extracted to: $ServerDir"
 
 # -- Unblock extracted files --------------------------------------------------
-# Files from a downloaded zip carry a Windows "internet zone" mark that
-# causes PowerShell to block them. Unblock-File removes that mark.
 Write-Host "  Unblocking extracted files..."
 Get-ChildItem $ServerDir -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
+
+# -- Create desktop shortcut --------------------------------------------------
+Create-Shortcut
 Write-Host ""
 
 # -- Run installer ------------------------------------------------------------
-# -ExecutionPolicy Bypass ensures the script runs even if Unblock-File
-# was not sufficient (e.g. restricted group policy).
 powershell.exe -ExecutionPolicy Bypass -File $InstallScript
