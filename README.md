@@ -67,25 +67,25 @@ A lightweight Node.js server that runs on your computer and receives files from 
 
 #### Linux / macOS
 
-Open a **Terminal**, create a folder for the server, and paste this single command:
+> **Run this in a Terminal (macOS / Linux only — do not run in PowerShell)**
 
 ```bash
 mkdir -p ~/LAN_backup && cd ~/LAN_backup && curl -fsSL https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.sh | bash
 ```
 
-That's it. The script downloads the companion server, installs Node.js if needed, and starts everything automatically.
+The script downloads the companion server, installs Node.js if needed, and starts everything automatically.
 
-> To restart the server later, run the same command again — it detects that the companion server is already installed and just starts it.
+> To restart later, run the same command again — it detects the server is already installed and just starts it.
 
 #### Windows
 
-Open **PowerShell** in the folder where you want backups saved and paste this single command:
+> **Run this in PowerShell (Windows only — do not run in Terminal/bash)**
 
 ```powershell
 mkdir C:\LAN_backup; cd C:\LAN_backup; Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; powershell.exe -ExecutionPolicy Bypass -File setup.ps1
 ```
 
-The `-ExecutionPolicy Bypass` flag is required because Windows blocks unsigned scripts downloaded from the internet — it is safe here and applies only to this one script.
+The `-ExecutionPolicy Bypass` flag is required because Windows blocks unsigned scripts downloaded from the internet — it is safe and applies only to this one script.
 
 > **To restart the server later**, open PowerShell in `C:\LAN_backup` and run:
 > ```powershell
