@@ -1,4 +1,4 @@
-# LAN Backup — Companion Server Installer (Windows)
+# LAN Backup - Companion Server Installer (Windows)
 #
 # What this script does:
 #   1. Checks whether Node.js is installed; installs it if not.
@@ -7,21 +7,20 @@
 #      saves it to .env, and prints it for you to copy into the app.
 #
 # How to run:
-#   Right-click this file → "Run with PowerShell"
-#   If Windows shows a security warning, click "Open" or "Run anyway".
+#   Open PowerShell in this folder and run:
+#   powershell.exe -ExecutionPolicy Bypass -File install.ps1
 #
 # Requirements: internet connection (only needed if Node.js must be installed)
 
-$ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 Write-Host ""
-Write-Host "╔════════════════════════════════════════════╗"
-Write-Host "║   LAN Backup — Server Setup (Windows)     ║"
-Write-Host "╚════════════════════════════════════════════╝"
+Write-Host "=============================================="
+Write-Host "   LAN Backup -- Server Setup (Windows)"
+Write-Host "=============================================="
 Write-Host ""
 
-# ── Check / install Node.js ───────────────────────────────────────────────────
+# -- Check / install Node.js --------------------------------------------------
 
 function Install-NodeViaWinget {
     Write-Host "  Installing Node.js via winget..."
@@ -58,7 +57,7 @@ if ($nodeFound) {
     $nodeVer = (node --version)
     Write-Host "  [OK] Node.js $nodeVer is already installed."
 } else {
-    Write-Host "  [!] Node.js not found — installing now..."
+    Write-Host "  [!] Node.js not found - installing now..."
     Write-Host ""
     $wingetFound = $null -ne (Get-Command winget -ErrorAction SilentlyContinue)
     if ($wingetFound) {
@@ -71,10 +70,10 @@ if ($nodeFound) {
 }
 
 Write-Host ""
-Write-Host "─────────────────────────────────────────────────"
+Write-Host "-------------------------------------------------"
 Write-Host "  Starting LAN Backup server..."
 Write-Host "  Press Ctrl+C to stop."
-Write-Host "─────────────────────────────────────────────────"
+Write-Host "-------------------------------------------------"
 Write-Host ""
 
 node "$ScriptDir\server.js"
