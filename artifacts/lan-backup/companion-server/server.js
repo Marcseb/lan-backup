@@ -99,7 +99,39 @@ function firstRunSetup() {
 }
 
 loadEnvFile();
-if (!process.env.LB_TOKEN) firstRunSetup();
+
+// Always write .env if it does not exist yet — so shortcut launches (which
+// start a fresh login shell without inheriting the parent shell's env vars)
+// find the correct token and backup dir on every subsequent run.
+if (!fs.existsSync(ENV_FILE)) {
+  if (process.env.LB_TOKEN) {
+    // Token came from the shell environment (e.g. LB_TOKEN exported in ~/.bashrc).
+    // Persist it now so future runs that don't inherit that env var still work.
+    const defaultDir = path.join(os.homedir(), "LAN-Backup");
+    const backupDirLine = process.env.LB_BACKUP_DIR
+      ? `LB_BACKUP_DIR=${process.env.LB_BACKUP_DIR}`
+      : `# LB_BACKUP_DIR=${defaultDir}`;
+    fs.writeFileSync(
+      ENV_FILE,
+      [
+        "# LAN Backup companion server — configuration",
+        `# Auto-generated: ${new Date().toISOString().slice(0, 10)}`,
+        "#",
+        "# IMPORTANT: copy LB_TOKEN into the LAN Backup app",
+        "#            Open the app → Settings tab → Auth Token field",
+        "#",
+        `LB_TOKEN=${process.env.LB_TOKEN}`,
+        "",
+        "# Optional — remove the # to change a default:",
+        "# LB_PORT=7823",
+        backupDirLine,
+      ].join("\n") + "\n",
+      "utf8"
+    );
+  } else {
+    firstRunSetup(); // no token anywhere — generate one, write .env, print banner
+  }
+}
 
 // ── Configuration ────────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.LB_PORT || "7823", 10);
