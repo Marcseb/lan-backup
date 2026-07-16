@@ -164,17 +164,33 @@ Exact location by platform:
 
 #### macOS / Linux
 
-1. Open **Terminal** and run:
-   ```bash
-   nano ~/LAN_backup/companion-server/.env
-   ```
-   *(save with **Ctrl + O**, exit with **Ctrl + X** — or substitute `nano` with any editor you prefer)*
-2. Find the line that starts with `LB_TOKEN=` and replace the value:
+The quickest and most reliable method is the terminal — the file is always there even when the file manager does not show it.
+
+**Verify the file is present:**
+```bash
+ls -la ~/LAN_backup/companion-server/.env
+```
+
+**Open and edit it:**
+```bash
+nano ~/LAN_backup/companion-server/.env
+```
+*(save with **Ctrl + O**, exit with **Ctrl + X** — or replace `nano` with any editor you like)*
+
+**Steps:**
+1. Find the line that starts with `LB_TOKEN=` and replace the value:
    ```
    LB_TOKEN=my-new-secret-token
    ```
-3. Save the file, then restart the server (`bash install.sh` or the desktop shortcut).
-4. Open the app → **Settings** tab → update **Auth Token** to match → tap **Save Settings**.
+2. Save the file, then restart the server (`bash install.sh` or the desktop shortcut).
+3. Open the app → **Settings** tab → update **Auth Token** to match → tap **Save Settings**.
+
+> **Can't see the file in the file manager?** Files starting with `.` are hidden on Linux. The "show hidden files" toggle in graphical file managers can be unreliable — use the keyboard shortcut instead:
+> - **GNOME Files (Nautilus):** press **Ctrl + H**
+> - **Dolphin (KDE):** press **Alt + .**
+> - **Thunar (XFCE):** press **Ctrl + H**
+>
+> If the file still doesn't appear, the terminal command above will always work regardless.
 
 #### Windows
 
