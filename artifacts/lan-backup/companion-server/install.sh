@@ -17,18 +17,48 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo ""
-echo "╔══════════════════════════════════════════════╗"
-echo "║   LAN Backup — Server Setup (Linux / macOS) ║"
-echo "╚══════════════════════════════════════════════╝"
+echo "LAN Backup -- Server Setup (Linux / macOS)"
+echo "============================================="
 echo ""
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# -- Load Node.js from common version managers --------------------------------
+# Needed when the script is launched from a desktop shortcut or cron job
+# where ~/.bashrc / ~/.bash_profile is not sourced automatically.
+
+# NVM (most common on Linux)
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  # shellcheck disable=SC1091
+  . "$NVM_DIR/nvm.sh"
+fi
+
+# nodenv
+if [ -d "$HOME/.nodenv/bin" ]; then
+  export PATH="$HOME/.nodenv/bin:$PATH"
+  eval "$(nodenv init -)" 2>/dev/null || true
+fi
+
+# fnm (Fast Node Manager)
+if [ -d "$HOME/.local/share/fnm" ]; then
+  export PATH="$HOME/.local/share/fnm:$PATH"
+  eval "$(fnm env)" 2>/dev/null || true
+fi
+
+# Homebrew on macOS (Apple Silicon and Intel)
+for brew_path in /opt/homebrew/bin /usr/local/bin; do
+  if [ -x "$brew_path/brew" ]; then
+    eval "$("$brew_path/brew" shellenv)" 2>/dev/null || true
+    break
+  fi
+done
+
+# -- Helpers ------------------------------------------------------------------
 
 need_sudo() {
   if command -v sudo &>/dev/null; then echo sudo; else echo ""; fi
 }
 
-# ── Node.js installation ──────────────────────────────────────────────────────
+# -- Node.js installation -----------------------------------------------------
 
 install_node_macos() {
   if command -v brew &>/dev/null; then

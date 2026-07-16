@@ -29,7 +29,7 @@ echo ""
 echo "  Backup folder : $SETUP_DIR"
 echo ""
 
-# -- Desktop shortcut ----------------------------------------------------------
+# -- Desktop shortcut ---------------------------------------------------------
 # Creates a one-click launcher on the Desktop so the user never needs to
 # remember the terminal command to restart the server.
 create_shortcut() {
@@ -57,6 +57,8 @@ ENDSCRIPT
 
   elif [[ "$OS" == "Linux" ]]; then
     # Linux: XDG .desktop file -- recognised by GNOME, KDE, XFCE, etc.
+    # Uses "bash -lc" (login shell) so ~/.bash_profile is sourced and NVM /
+    # other Node version managers are on the PATH.
     local SHORTCUT="$DESKTOP/lan-backup-server.desktop"
     if [[ ! -f "$SHORTCUT" ]]; then
       if [[ -d "$DESKTOP" ]]; then
@@ -65,7 +67,7 @@ ENDSCRIPT
 Type=Application
 Name=LAN Backup Server
 Comment=Start the LAN Backup companion server
-Exec=bash -c "cd '$SETUP_DIR' && bash companion-server/install.sh; exec bash"
+Exec=bash -lc "cd '$SETUP_DIR' && bash companion-server/install.sh; exec bash"
 Terminal=true
 Icon=network-server
 Categories=Network;
@@ -78,7 +80,7 @@ ENDDESKTOP
   fi
 }
 
-# -- Check for already-installed companion server ------------------------------
+# -- Check for already-installed companion server -----------------------------
 if [[ -f "$DEST_DIR/companion-server/server.js" ]]; then
   echo "  Companion server already installed."
   echo "  Starting it now..."
@@ -88,7 +90,7 @@ if [[ -f "$DEST_DIR/companion-server/server.js" ]]; then
   exec bash "$DEST_DIR/companion-server/install.sh"
 fi
 
-# -- Download ------------------------------------------------------------------
+# -- Download -----------------------------------------------------------------
 echo "  Downloading companion server..."
 
 if command -v curl &>/dev/null; then
@@ -105,7 +107,7 @@ fi
 
 echo "  Download complete."
 
-# -- Extract -------------------------------------------------------------------
+# -- Extract ------------------------------------------------------------------
 echo "  Extracting..."
 tar -xzf "$DEST_DIR/companion-server.tar.gz" -C "$DEST_DIR"
 rm -f "$DEST_DIR/companion-server.tar.gz"
