@@ -138,8 +138,8 @@ const PORT = parseInt(process.env.LB_PORT || "7823", 10);
 const AUTH_TOKEN = process.env.LB_TOKEN;
 const BACKUP_ROOT = process.env.LB_BACKUP_DIR || path.join(os.homedir(), "LAN-Backup");
 
-// Log config location so users can always find and edit .env
-console.log(`  Config  : ${ENV_FILE}`);
+// Log the path to the config file (not the token) so users can find and edit it
+console.log(`  Config file : ${ENV_FILE}`);
 const SERVER_ID_FILE = path.join(__dirname, ".server-id");
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 600; // 10 uploads/sec sustained — protects against DoS while allowing bulk backups
