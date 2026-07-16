@@ -1,136 +1,194 @@
 # LAN Backup
 
-Back up files and folders from your phone to a computer on the same Wi-Fi network — no cloud, no account, no USB cable.
+Back up files from your phone to your computer over Wi-Fi — no cloud, no account, no cable.
 
 ---
 
-## Part 1 — Mobile app (your phone)
+## Quick Start
 
-The app runs inside **Expo Go**, a free shell available on both iOS and Android.
+Three steps and you're done. The whole setup takes about five minutes.
 
-### Install Expo Go
+---
 
-| Platform | Link |
+### Step 1 — Get the app on your phone
+
+LAN Backup runs inside **Expo Go**, a free app available on both platforms.
+
+| Platform | Install Expo Go |
 |---|---|
-| Android | [Play Store — Expo Go](https://play.google.com/store/apps/details?id=host.exp.exponent) |
+| Android | [Google Play — Expo Go](https://play.google.com/store/apps/details?id=host.exp.exponent) |
 | iOS | [App Store — Expo Go](https://apps.apple.com/app/expo-go/id982107779) |
 
-### Open LAN Backup
+Once Expo Go is installed, open LAN Backup inside it:
 
-**On Android:** open Expo Go and the app should appear automatically under "Development servers". If not, tap **Enter URL manually**.
-
-**On iOS:** open **Safari** and type the address below — Safari will offer to open it in Expo Go:
-
+**On Android** — open Expo Go, tap **"Enter URL manually"** and type:
 ```
 exp://6ea29a26-a374-4b67-ac7b-a6eb0c7421ee-00-5bkvdz56o8j4.expo.kirk.replit.dev
 ```
 
-Or scan this QR code with the iPhone camera:
+**On iOS** — open **Safari** and type that same address. Safari will offer to open it in Expo Go. Alternatively, scan this QR code with the iPhone camera:
 
 > 📷 [Download QR code](../attached_assets/expo-qr.png)
 
-The app will load. The first time may take a few seconds.
+The app will load in a few seconds. You can add it to your Expo Go home screen for quick access later.
 
-> **Note:** both your phone and your computer must be on the same Wi-Fi network for transfers to work.
-
-### First-time setup in the app
-
-Once the app is open, go to the **Settings** tab:
-
-1. Tap **"Detect computers on this network"** — the app scans your Wi-Fi and lists any computers running the companion server. Tap your computer to fill in its address automatically.
-2. Enter the **auth token** shown when you started the server (see Part 2 below).
-3. Optionally adjust the **Target Folder** name (default: `backup`).
-4. Tap **Save Settings**, then **Test Connection** to confirm everything works.
-
-### Image compression (optional)
-
-The **⊡** button in the action bar lets you compress photos before they are sent — useful for documents like bills or receipts where a small, readable file is enough.
-
-- Tap ⊡ to toggle compression on (button turns blue) or off before starting a backup.
-- In **Settings → Image Compression Quality**, choose your preset:
-
-| Preset | JPEG quality | Max dimension | Best for |
-|--------|-------------|---------------|----------|
-| Low    | 40%         | 1024 px       | Bills, receipts, text documents |
-| Medium | 65%         | 1920 px       | Everyday photos |
-| High   | 85%         | 2560 px       | Near-original quality |
-
-> Only image files (JPG, PNG, HEIC, WebP) are compressed. Videos, PDFs, and other files are always sent as-is.
+> **Both your phone and your computer must be on the same Wi-Fi network** for transfers to work.
 
 ---
 
-## Part 2 — Companion server (your computer)
+### Step 2 — Start the server on your computer
 
-A lightweight Node.js server that runs on your computer and receives files from the app.
-
-### Quick Install
-
-Download the `companion-server` folder to your computer, then run the installer for your platform:
+The companion server is a small program that runs on your computer and receives files from the app. You only install it once.
 
 #### macOS / Linux
 
-Open **Terminal**, navigate to the `companion-server` folder, and run:
+Open **Terminal**, paste the command below, and press Enter:
 
 ```bash
-bash install.sh
+mkdir -p ~/LAN_backup && cd ~/LAN_backup && \
+curl -fsSL https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.sh | bash
 ```
 
-This installs Node.js automatically if it is not already present, then starts the server.
+This downloads and starts the server automatically. Node.js is installed for you if needed.
 
 #### Windows
 
-Right-click **`install.ps1`** and choose **"Run with PowerShell"**.
-
-If Windows shows a blue security warning, click **"Open anyway"** — the script is safe and only installs Node.js and starts the server.
-
-> **Tip — execution policy:** if PowerShell refuses to run the script, open PowerShell as Administrator and run:
-> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
-> Then try again.
+1. Download **[setup.ps1](https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1)** — right-click the link and choose "Save link as".
+2. Right-click the downloaded file and choose **"Run with PowerShell"**.
+3. If Windows shows a blue security prompt, click **"More info" → "Run anyway"** — the script only installs Node.js and starts the server.
 
 ---
 
-### First run
-
-The very first time the server starts it will:
-
-1. Generate a secure random auth token.
-2. Save it to a file called **`.env`** in the same folder (so you never need to set it manually again).
-3. Print it clearly in the terminal — copy it into the app under **Settings → Auth Token**.
+When the server starts for the first time, it prints an **auth token** — a short code you will need in the next step:
 
 ```
 ╔════════════════════════════════════════════════════════════╗
 ║  LAN Backup — First-time Setup                             ║
 ╠════════════════════════════════════════════════════════════╣
 ║                                                            ║
-║  A secure token has been generated and saved to .env       ║
-║                                                            ║
 ║  Copy this token into the app:                             ║
 ║  App → Settings tab → Auth Token field                     ║
 ║                                                            ║
 ║  Token:  a1b2c3d4e5f6...                                   ║
 ║                                                            ║
-║  The token is saved in .env and reused on every start.     ║
-║  To reset it, delete .env and restart the server.          ║
-║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
 ```
 
-From the second run onwards, just run the installer again (or `node server.js`) — the token is loaded from `.env` automatically.
+The token is saved automatically — you won't need to copy it again after this.
+
+A **desktop shortcut** is also created so you can start the server with one click in the future.
 
 ---
 
-### Subsequent starts
+### Step 3 — Connect the app to your computer
 
-| Platform | Command |
+In the LAN Backup app, open the **Settings** tab:
+
+1. Tap **"Detect computers on this network"** — the app scans your Wi-Fi and lists computers running the server. Tap your computer to fill in its address automatically.
+2. Paste the **auth token** shown in the terminal into the **Auth Token** field.
+3. Tap **Save Settings**, then **Test Connection**.
+
+You should see a green confirmation. You're ready to back up.
+
+---
+
+## Backing up files
+
+Open the **Backup** tab. Tap the **+** button to pick files or folders from your phone, then tap **Start Backup**. A progress bar shows each file being transferred.
+
+- To cancel a transfer in progress, tap **Cancel**.
+- Past transfers are listed in the **History** tab with their status, file names, sizes, and timestamps.
+
+### Image compression (optional)
+
+Tap the **⊡** button before starting a backup to compress photos — useful for documents like bills or receipts.
+
+| Preset | Quality | Max size | Best for |
+|---|---|---|---|
+| Low | 40% | 1024 px | Bills, receipts, text |
+| Medium | 65% | 1920 px | Everyday photos |
+| High | 85% | 2560 px | Near-original quality |
+
+Videos, PDFs, and other file types are always sent as-is.
+
+---
+
+## Restarting the server
+
+The server needs to be running on your computer whenever you want to back up. To start it again after closing it:
+
+| Platform | How to restart |
 |---|---|
-| macOS / Linux | `bash install.sh` (or `node server.js` once Node.js is installed) |
-| Windows | Double-click `install.ps1` (or run `node server.js` in a terminal) |
+| macOS / Linux | Double-click the **"Start LAN Backup Server"** shortcut on your Desktop |
+| Windows | Double-click the **"Start LAN Backup Server"** shortcut on your Desktop |
+
+If the shortcut is missing, you can always re-run the original install command — it detects the existing install and just starts the server.
 
 ---
 
-### Configuration (optional)
+## Restore — send files from computer to phone
 
-All settings live in the **`.env`** file created on first run. Open it in any text editor:
+The **Restore** tab lets you send files **from your computer to your phone**. This feature requires a one-time €5 contribution (unlocked via PayPal inside the app).
+
+1. Place the files you want to send inside the **`export/`** sub-folder of your backup directory:
+   ```
+   ~/LAN_backup/
+   └── companion-server/
+   ~/LAN-Backup/           ← backup root
+   ├── backup/             ← phone → computer
+   └── export/             ← computer → phone  ← put files here
+       ├── photo.jpg
+       └── document.pdf
+   ```
+2. Open the **Restore** tab in the app.
+3. Select the files you want and tap **Download to phone**.
+
+---
+
+## Support this project
+
+LAN Backup is free and open source. If it saves you time, a contribution is always appreciated!
+
+- ☕ [Buy me a coffee](https://buymeacoffee.com/marcsebastien)
+- 💙 [Donate via PayPal](https://www.paypal.com/donate/?business=7AUYVWJE39NMQ&no_recurring=0&item_name=Building+open+source+apps+that+are+secure%2C+practical%2C+and+keep+your+data+local%E2%80%94not+in+the+cloud.&currency_code=EUR)
+
+---
+---
+
+# Advanced
+
+The sections below are for users who want to customise, troubleshoot, or understand how LAN Backup works under the hood.
+
+---
+
+## Where files are saved
+
+Backed-up files are stored on your computer under:
+```
+<backup root> / <Target Folder> / <relative path from phone>
+```
+
+The default backup root is `~/LAN-Backup`. The Target Folder is set in the app (default: `backup`). Folder structure from the phone is preserved:
+
+```
+~/LAN-Backup/
+└── backup/
+    └── Camera/
+        ├── photo.jpg
+        └── Screenshots/
+            └── screen1.png
+```
+
+---
+
+## Configuration
+
+All settings live in a hidden **`.env`** file created automatically on first run, inside the `companion-server` folder:
+
+| Platform | Path to `.env` |
+|---|---|
+| macOS / Linux | `~/LAN_backup/companion-server/.env` |
+| Windows | `C:\Users\YourName\LAN_backup\companion-server\.env` |
 
 | Setting | Default | Description |
 |---|---|---|
@@ -138,135 +196,45 @@ All settings live in the **`.env`** file created on first run. Open it in any te
 | `LB_PORT` | `7823` | Port the server listens on |
 | `LB_BACKUP_DIR` | `~/LAN-Backup` | Root folder where uploaded files are stored |
 
-To change a setting, remove the `#` at the start of the line and edit the value, then restart the server.
+To change a setting, open `.env` in any text editor, edit the value, save, and restart the server.
 
-You can also override settings by passing environment variables before `node server.js`:
+### Opening `.env` on macOS / Linux
 
-```bash
-LB_PORT=8000 node server.js        # macOS / Linux
-set LB_PORT=8000 && node server.js # Windows cmd
-```
+The quickest method is the terminal:
 
----
-
-### Changing the auth token
-
-The auth token is stored in a hidden **`.env`** file that the server creates on its first run.
-
-> **Important — the file is inside the `companion-server` sub-folder, not in the parent `LAN_backup` folder.**
-
-Exact location by platform:
-
-| Platform | Full path to `.env` |
-|---|---|
-| macOS / Linux | `~/LAN_backup/companion-server/.env` |
-| Windows | `C:\Users\YourName\LAN_backup\companion-server\.env` |
-
-#### macOS / Linux
-
-The quickest and most reliable method is the terminal — the file is always there even when the file manager does not show it.
-
-**Verify the file is present:**
-```bash
-ls -la ~/LAN_backup/companion-server/.env
-```
-
-**Open and edit it:**
 ```bash
 nano ~/LAN_backup/companion-server/.env
 ```
-*(save with **Ctrl + O**, exit with **Ctrl + X** — or replace `nano` with any editor you like)*
+Save with **Ctrl + O**, exit with **Ctrl + X**.
 
-**Steps:**
-1. Find the line that starts with `LB_TOKEN=` and replace the value:
-   ```
-   LB_TOKEN=my-new-secret-token
-   ```
-2. Save the file, then restart the server (`bash install.sh` or the desktop shortcut).
-3. Open the app → **Settings** tab → update **Auth Token** to match → tap **Save Settings**.
+> **Can't see the file in the file manager?** Press the keyboard shortcut for your file manager: **Ctrl + H** in GNOME Files or Thunar, **Alt + .** in Dolphin. The terminal command above always works regardless.
 
-> **Can't see the file in the file manager?** Files starting with `.` are hidden on Linux. The "show hidden files" toggle in graphical file managers can be unreliable — use the keyboard shortcut instead:
-> - **GNOME Files (Nautilus):** press **Ctrl + H**
-> - **Dolphin (KDE):** press **Alt + .**
-> - **Thunar (XFCE):** press **Ctrl + H**
->
-> If the file still doesn't appear, the terminal command above will always work regardless.
+### Opening `.env` on Windows
 
-#### Windows
-
-1. Open **File Explorer**.
-2. Paste this path into the address bar and press **Enter**:
+1. Open **File Explorer** and paste this into the address bar:
    ```
    %USERPROFILE%\LAN_backup\companion-server
    ```
-3. If `.env` is not visible, click **View** → tick **Hidden items**.
-4. Right-click **`.env`** → **Open with** → **Notepad** (or any text editor).
-5. Find the line that starts with `LB_TOKEN=` and replace the value:
-   ```
-   LB_TOKEN=my-new-secret-token
-   ```
-6. Save the file (**Ctrl + S**), then restart the server (double-click `install.ps1`).
-7. Open the app → **Settings** tab → update **Auth Token** to match → tap **Save Settings**.
+2. If `.env` is not visible, click **View** → tick **Hidden items**.
+3. Right-click **`.env`** → **Open with** → **Notepad**.
 
-> **Tip — reset to a fresh token:** delete the `.env` file entirely and restart the server. A new random token will be generated and printed in the terminal.
+### Resetting the auth token
 
----
-
-### What gets saved where
-
-Files are stored under `LB_BACKUP_DIR / <Target Folder> / <relative path>`.
-
-When you back up a folder from the app, the full directory structure is recreated on your computer:
-
-```
-~/LAN-Backup/
-└── phone/                  ← Target Folder set in the app
-    └── Camera/
-        ├── photo.jpg
-        └── Screenshots/
-            └── screen1.png
-```
-
-Individual files picked without a folder are saved flat inside the Target Folder.
-
----
-
-## Restore — Desktop to Phone (unlockable feature)
-
-You can also send files **from your computer to your phone** using the **Restore** tab in the app. This feature requires a one-time €5 contribution (unlocked via PayPal inside the app).
-
-### How it works
-
-1. Place the files you want to send to your phone inside the **`export/`** sub-folder of the backup directory:
-   ```
-   ~/LAN-Backup/
-   ├── backup/         ← phone → desktop (as before)
-   └── export/         ← desktop → phone  ← put files here
-       ├── photo.jpg
-       └── document.pdf
-   ```
-2. Open the **Restore** tab in the app.
-3. The app lists the files in `export/` — select one or several, choose a destination folder on your phone, and tap **Download to phone**.
-
-### Security of the export folder
-
-- Only **flat files** in `export/` are served — subdirectories and symlinks are never accessible.
-- The same **bearer token auth** and **TOFU fingerprint** protection apply.
-- File names are validated with `path.basename()` on both sides to prevent any path traversal.
+Delete the `.env` file entirely and restart the server. A new random token will be generated and printed in the terminal — copy it back into the app Settings.
 
 ---
 
 ## Security
 
-- **Bearer token auth** on all file-sensitive endpoints
-- **Rate limiting** — max 600 requests per minute per IP
-- **SHA-256 checksum** computed for every received file
+- **Bearer token auth** on all file-sensitive endpoints — all requests require the token you set in the app
+- **TOFU fingerprint** — the server generates a unique ID on first run; the app warns you if it changes (possible impersonation)
 - **Path traversal protection** — every path segment is validated; `../` escapes are rejected
-- **TOFU fingerprint** — a unique server ID is generated on first run; the app alerts you if it ever changes (possible impersonation)
+- **SHA-256 checksum** computed for every received file
+- **Rate limiting** — max 600 requests per minute per IP
 
 ### Recommendations
 
-1. **Use on trusted networks only** — this server uses plain HTTP and is designed for home LAN use.
+1. **Use on trusted networks only** — the server uses plain HTTP, designed for home LAN use.
 2. **Don't expose to the internet** — run the server only while doing backups.
 3. **Firewall** — consider restricting port 7823 to your LAN subnet only.
 
@@ -278,15 +246,15 @@ You can also send files **from your computer to your phone** using the **Restore
 |---|---|---|---|
 | `GET` | `/ping` | No | Returns server ID and version (used for TOFU) |
 | `GET` | `/disk` | Yes | Returns disk space info |
-| `POST` | `/upload` | Yes | Accepts a file upload (phone → desktop) |
+| `POST` | `/upload` | Yes | Accepts a file upload (phone → computer) |
 | `GET` | `/export/list` | Yes | Lists files available in the `export/` folder |
 | `GET` | `/export/file?name=x` | Yes | Downloads one file from `export/` to the phone |
 
 ---
 
-## Support this project
+## Architecture
 
-LAN Backup is free and open source. If it saves you time, a contribution is always appreciated!
-
-- ☕ [Buy me a coffee](https://buymeacoffee.com/marcsebastien)
-- 💙 [Donate via PayPal](https://www.paypal.com/donate/?business=7AUYVWJE39NMQ&no_recurring=0&item_name=Building+open+source+apps+that+are+secure%2C+practical%2C+and+keep+your+data+local%E2%80%94not+in+the+cloud.&currency_code=EUR)
+- The phone connects **directly** to the companion server over LAN — no cloud relay, no backend.
+- Credentials are stored in the **device secure enclave** (iOS Keychain / Android Keystore) using `expo-secure-store`.
+- The server is plain Node.js with no framework dependencies beyond `express` and standard Node built-ins.
+- The desktop shortcut embeds the backup directory path, so the correct folder is always used even if the `.env` file is missing.
