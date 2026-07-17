@@ -958,12 +958,12 @@ export default function BackupScreen() {
               </Text>
               <TouchableOpacity
                 style={[helpStyles.linkBtn, { backgroundColor: colors.primary }]}
-                onPress={() => Linking.openURL("https://github.com/Marcseb/lan-backup")}
+                onPress={() => Linking.openURL("https://github.com/Marcseb/lan-backup/releases/tag/v1.0.0")}
                 activeOpacity={0.8}
               >
                 <Feather name="github" size={16} color={colors.primaryForeground} />
                 <Text style={[helpStyles.linkBtnText, { color: colors.primaryForeground }]}>
-                  github.com/Marcseb/lan-backup
+                  github.com/Marcseb/lan-backup/releases
                 </Text>
               </TouchableOpacity>
             </View>
