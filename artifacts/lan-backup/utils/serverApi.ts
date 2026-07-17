@@ -300,24 +300,26 @@ export async function uploadFile(
 
     const uploadUri = tempUri ?? file.uri;
 
+    const uploadOptions = {
+      httpMethod: "POST",
+      uploadType: FileSystemUploadType.MULTIPART,
+      fieldName: "file",
+      mimeType: "application/octet-stream",
+      parameters: {
+        targetFolder: settings.targetFolder,
+        filename: file.name,
+        ...(file.relativePath ? { relativePath: file.relativePath } : {}),
+      },
+      headers: authHeaders(settings),
+      onUploadProgress: ({ totalByteSent, totalBytesExpectedToSend }: { totalByteSent: number; totalBytesExpectedToSend: number }) => {
+        onProgress?.(totalByteSent, totalBytesExpectedToSend || file.size);
+      },
+    } as Parameters<typeof uploadAsync>[2];
+
     const res = await uploadAsync(
       `${baseUrl(settings)}/upload`,
       uploadUri,
-      {
-        httpMethod: "POST",
-        uploadType: FileSystemUploadType.MULTIPART,
-        fieldName: "file",
-        mimeType: "application/octet-stream",
-        parameters: {
-          targetFolder: settings.targetFolder,
-          filename: file.name,
-          ...(file.relativePath ? { relativePath: file.relativePath } : {}),
-        },
-        headers: authHeaders(settings),
-        onUploadProgress: ({ totalByteSent, totalBytesExpectedToSend }) => {
-          onProgress?.(totalByteSent, totalBytesExpectedToSend || file.size);
-        },
-      }
+      uploadOptions
     );
 
     if (res.status === 401) throw new Error("Unauthorized — check your auth token");
