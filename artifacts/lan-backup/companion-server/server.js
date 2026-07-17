@@ -780,8 +780,8 @@ server.listen(PORT, "0.0.0.0", () => {
     }
   }
   console.log("─────────────────────────────────────────────");
-  console.log("  Copy the auth token above into the app:");
-  console.log("  App → Settings tab → Auth Token field");
+  console.log("  If you have lost the auth token, find it in:");
+  console.log(`  ${ENV_FILE}  (LB_TOKEN line)`);
   console.log("─────────────────────────────────────────────");
   console.log("  Press Ctrl+C to stop");
 });
