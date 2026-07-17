@@ -83,6 +83,26 @@ export interface DiscoveredServer {
   id: string;
 }
 
+export async function pingServerAt(
+  ip: string,
+  port: string
+): Promise<{ ok: boolean; id: string | null; hostname: string | null; error?: string }> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const res = await fetch(`http://${ip}:${port}/ping`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!res.ok) {
+      return { ok: false, id: null, hostname: null, error: `Server returned ${res.status}` };
+    }
+    const data = (await res.json()) as PingResult;
+    return { ok: true, id: data.id ?? null, hostname: data.hostname ?? null };
+  } catch {
+    clearTimeout(timer);
+    return { ok: false, id: null, hostname: null, error: "Cannot reach server — check the IP and port" };
+  }
+}
+
 export async function discoverServers(
   subnet: string,
   port: string,

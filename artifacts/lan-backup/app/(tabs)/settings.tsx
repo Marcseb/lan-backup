@@ -17,7 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { type PeerServer, useSettings } from "@/context/SettingsContext";
 import { useColors } from "@/hooks/useColors";
-import { discoverServers, getDiskInfo, pingServer, type DiscoveredServer } from "@/utils/serverApi";
+import { discoverServers, getDiskInfo, pingServer, pingServerAt, type DiscoveredServer } from "@/utils/serverApi";
 
 function SettingsField({
   label,
@@ -105,6 +105,13 @@ export default function SettingsScreen() {
   } | null>(null);
   const [peerToken, setPeerToken] = useState("");
   const [peerName, setPeerName] = useState("");
+
+  // Manual peer entry flow
+  const [showManualPeer, setShowManualPeer] = useState(false);
+  const [manualPeerIp, setManualPeerIp] = useState("");
+  const [manualPeerPort, setManualPeerPort] = useState("7823");
+  const [manualPeerChecking, setManualPeerChecking] = useState(false);
+  const [manualPeerError, setManualPeerError] = useState<string | null>(null);
 
   const hasUnsaved =
     localIp !== settings.serverIp ||
@@ -257,6 +264,40 @@ export default function SettingsScreen() {
     setAddingPeer(null);
     setPeerToken("");
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const openManualPeer = () => {
+    setManualPeerIp("");
+    setManualPeerPort("7823");
+    setManualPeerError(null);
+    setShowManualPeer(true);
+  };
+
+  const confirmManualPeer = async () => {
+    const ip = manualPeerIp.trim();
+    const port = manualPeerPort.trim() || "7823";
+    if (!ip) {
+      setManualPeerError("IP address is required");
+      return;
+    }
+    setManualPeerChecking(true);
+    setManualPeerError(null);
+    const result = await pingServerAt(ip, port);
+    setManualPeerChecking(false);
+    if (!result.ok) {
+      setManualPeerError(result.error ?? "Cannot reach server — check the IP and port");
+      return;
+    }
+    setShowManualPeer(false);
+    setAddingPeer({
+      ip,
+      port,
+      hostname: result.hostname ?? ip,
+      fingerprint: result.id,
+    });
+    setPeerToken("");
+    setPeerName(result.hostname ?? ip);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const removePeer = (peerId: string) => {
@@ -494,6 +535,85 @@ export default function SettingsScreen() {
               >
                 <Feather name="plus" size={15} color={colors.primaryForeground} />
                 <Text style={[peerModalStyles.addText, { color: colors.primaryForeground }]}>Add Server</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Manual Peer Entry Modal ── */}
+      <Modal
+        visible={showManualPeer}
+        animationType="fade"
+        transparent
+        onRequestClose={() => !manualPeerChecking && setShowManualPeer(false)}
+      >
+        <View style={peerModalStyles.overlay}>
+          <View style={[peerModalStyles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[peerModalStyles.title, { color: colors.foreground }]}>Enter server address</Text>
+            <Text style={[peerModalStyles.sub, { color: colors.mutedForeground }]}>
+              Enter the IP and port of the peer server. The app will connect to verify it's reachable.
+            </Text>
+
+            <Text style={[styles.fieldLabel, { color: colors.foreground, marginTop: 16 }]}>IP Address *</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.background, borderColor: colors.border, marginTop: 4 }]}>
+              <TextInput
+                value={manualPeerIp}
+                onChangeText={(v) => { setManualPeerIp(v); setManualPeerError(null); }}
+                placeholder="192.168.1.100"
+                placeholderTextColor={colors.mutedForeground}
+                keyboardType="url"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!manualPeerChecking}
+                style={[styles.input, { color: colors.foreground }]}
+              />
+            </View>
+
+            <Text style={[styles.fieldLabel, { color: colors.foreground, marginTop: 12 }]}>Port</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.background, borderColor: colors.border, marginTop: 4 }]}>
+              <TextInput
+                value={manualPeerPort}
+                onChangeText={(v) => { setManualPeerPort(v); setManualPeerError(null); }}
+                placeholder="7823"
+                placeholderTextColor={colors.mutedForeground}
+                keyboardType="numeric"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!manualPeerChecking}
+                style={[styles.input, { color: colors.foreground }]}
+              />
+            </View>
+
+            {manualPeerError && (
+              <View style={[manualModalStyles.errorRow, { backgroundColor: "#fee2e2", borderColor: colors.destructive }]}>
+                <Feather name="alert-circle" size={13} color={colors.destructive} />
+                <Text style={[manualModalStyles.errorText, { color: colors.destructive }]}>{manualPeerError}</Text>
+              </View>
+            )}
+
+            <View style={peerModalStyles.buttons}>
+              <TouchableOpacity
+                style={[peerModalStyles.cancelBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+                onPress={() => setShowManualPeer(false)}
+                disabled={manualPeerChecking}
+                activeOpacity={0.7}
+              >
+                <Text style={[peerModalStyles.cancelText, { color: colors.foreground }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[peerModalStyles.addBtn, { backgroundColor: manualPeerIp.trim() ? colors.primary : colors.muted }]}
+                onPress={confirmManualPeer}
+                disabled={!manualPeerIp.trim() || manualPeerChecking}
+                activeOpacity={0.8}
+              >
+                {manualPeerChecking
+                  ? <ActivityIndicator size="small" color={colors.primaryForeground} />
+                  : <Feather name="arrow-right" size={15} color={colors.primaryForeground} />
+                }
+                <Text style={[peerModalStyles.addText, { color: colors.primaryForeground }]}>
+                  {manualPeerChecking ? "Connecting…" : "Connect"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -773,9 +893,20 @@ export default function SettingsScreen() {
               onPress={openPeerDiscovery}
               activeOpacity={0.7}
             >
-              <Feather name="plus-circle" size={16} color={colors.primary} />
+              <Feather name="radio" size={16} color={colors.primary} />
               <Text style={[styles.securityTitle, { color: colors.primary, marginLeft: 4 }]}>
-                Add peer server…
+                Scan network…
+              </Text>
+            </TouchableOpacity>
+            <View style={[styles.separator, { backgroundColor: colors.border }]} />
+            <TouchableOpacity
+              style={styles.qualityRow}
+              onPress={openManualPeer}
+              activeOpacity={0.7}
+            >
+              <Feather name="edit-2" size={16} color={colors.primary} />
+              <Text style={[styles.securityTitle, { color: colors.primary, marginLeft: 4 }]}>
+                Enter manually…
               </Text>
             </TouchableOpacity>
           </View>
@@ -1099,6 +1230,24 @@ const styles = StyleSheet.create({
   rescanBtnText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
+  },
+});
+
+const manualModalStyles = StyleSheet.create({
+  errorRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    padding: 10,
+    marginTop: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
   },
 });
 
