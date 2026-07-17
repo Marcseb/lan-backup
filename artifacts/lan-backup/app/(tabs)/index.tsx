@@ -874,8 +874,14 @@ export default function BackupScreen() {
                 <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>What is LAN Backup?</Text>
               </View>
               <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
-                LAN Backup lets you transfer files and folders from your phone to a computer on the same Wi-Fi network — no cloud, no account, no USB cable required.{"\n\n"}
-                Files travel directly over your local network using a small companion server that runs on your computer. All transfers are protected by a secret auth token and a server fingerprint that detects unexpected server changes.
+                LAN Backup works entirely over your local Wi-Fi — no cloud, no account, no USB cable.{"\n\n"}
+                <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>Backup</Text>
+                {"  "}Transfer files and folders from your phone to your computer.{"\n"}
+                <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>Restore</Text>
+                {"  "}Send files from your computer back to your phone. <Text style={{ fontFamily: "Inter_500Medium" }}>(Pro)</Text>{"\n"}
+                <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>Server Sync</Text>
+                {"  "}Push files from one computer to others over LAN. <Text style={{ fontFamily: "Inter_500Medium" }}>(Pro)</Text>{"\n\n"}
+                All transfers use a secret auth token and a server fingerprint that alerts you if the server identity changes unexpectedly.
               </Text>
             </View>
 
@@ -885,15 +891,25 @@ export default function BackupScreen() {
                 <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Installing the companion server</Text>
               </View>
               <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
-                The companion server is a single JavaScript file that runs on your computer (macOS, Windows, or Linux). Node.js 18 or later is required.
+                The companion server runs on your computer (macOS, Windows, or Linux). A one-command installer handles Node.js and first-time setup automatically.
               </Text>
-              <Text style={[helpStyles.step, { color: colors.foreground }]}>1. Copy <Text style={helpStyles.code}>server.js</Text> from the project's <Text style={helpStyles.code}>companion-server/</Text> folder to your computer.</Text>
-              <Text style={[helpStyles.step, { color: colors.foreground }]}>2. Open a terminal in the same folder and run:</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>
+                <Text style={helpStyles.code}>macOS / Linux</Text> — open Terminal and run:
+              </Text>
               <View style={[helpStyles.codeBlock, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                <Text style={[helpStyles.codeText, { color: colors.foreground }]}>{"# macOS / Linux\nLB_TOKEN=your_secret node server.js\n\n# Windows\nset LB_TOKEN=your_secret\nnode server.js"}</Text>
+                <Text style={[helpStyles.codeText, { color: colors.foreground }]}>{"mkdir -p ~/LAN_backup && cd ~/LAN_backup && \\\ncurl -fsSL https://raw.githubusercontent.com/\nMarcseb/lan-backup/main/setup.sh | bash"}</Text>
               </View>
-              <Text style={[helpStyles.step, { color: colors.foreground }]}>3. The server listens on port <Text style={helpStyles.code}>7823</Text> by default. Files are saved to <Text style={helpStyles.code}>~/LAN-Backup</Text>.</Text>
-              <Text style={[helpStyles.step, { color: colors.foreground }]}>4. Keep the terminal open while doing backups.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>
+                <Text style={helpStyles.code}>Windows</Text> — open PowerShell and run:
+              </Text>
+              <View style={[helpStyles.codeBlock, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Text style={[helpStyles.codeText, { color: colors.foreground }]}>{"mkdir ~\\LAN_backup; cd ~\\LAN_backup\nInvoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1\npowershell.exe -ExecutionPolicy Bypass -File setup.ps1"}</Text>
+              </View>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>On first launch the server asks you to choose an auth token (random or your own). <Text style={helpStyles.code}>Copy it</Text> — it is shown only once.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>A desktop shortcut is created so future restarts are just a double-click.</Text>
+              <Text style={[helpStyles.tip, { color: colors.mutedForeground, borderLeftColor: colors.primary }]}>
+                💡 Token shown only once — find it later in the server's <Text style={{ fontFamily: "Inter_600SemiBold" }}>.env</Text> file under <Text style={{ fontFamily: "Inter_600SemiBold" }}>LB_TOKEN</Text>.
+              </Text>
             </View>
 
             <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
@@ -906,7 +922,7 @@ export default function BackupScreen() {
               </Text>
               <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Server IP</Text> — tap <Text style={helpStyles.code}>Detect computers on this network</Text> to scan your Wi-Fi and pick your computer automatically. Or enter its IP address manually (e.g. <Text style={helpStyles.code}>192.168.1.10</Text>).</Text>
               <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Port</Text> — leave at <Text style={helpStyles.code}>7823</Text> unless you changed it with <Text style={helpStyles.code}>LB_PORT</Text>.</Text>
-              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Auth Token</Text> — the exact same value you used for <Text style={helpStyles.code}>LB_TOKEN</Text> when starting the server.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Auth Token</Text> — the token chosen on first server launch (shown once in the terminal). Find it later in the server's <Text style={helpStyles.code}>.env</Text> file under <Text style={helpStyles.code}>LB_TOKEN</Text>.</Text>
               <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>Target Folder</Text> — an optional sub-folder name inside the backup directory (e.g. <Text style={helpStyles.code}>phone</Text>).</Text>
               <Text style={[helpStyles.tip, { color: colors.mutedForeground, borderLeftColor: colors.primary }]}>
                 💡 Tap <Text style={{ fontFamily: "Inter_600SemiBold" }}>Test Connection</Text> after saving to verify the connection. A green status means you're ready to back up.
@@ -954,16 +970,16 @@ export default function BackupScreen() {
                 <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Get the companion server</Text>
               </View>
               <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
-                The latest version of <Text style={helpStyles.code}>server.js</Text> is available on GitHub. Open the link on your computer to download it.
+                The setup scripts (<Text style={helpStyles.code}>setup.sh</Text> / <Text style={helpStyles.code}>setup.ps1</Text>) and the latest <Text style={helpStyles.code}>server.js</Text> are on GitHub. Open the link on your computer to follow the install instructions.
               </Text>
               <TouchableOpacity
                 style={[helpStyles.linkBtn, { backgroundColor: colors.primary }]}
-                onPress={() => Linking.openURL("https://github.com/Marcseb/lan-backup/releases/tag/v1.0.0")}
+                onPress={() => Linking.openURL("https://github.com/Marcseb/lan-backup")}
                 activeOpacity={0.8}
               >
                 <Feather name="github" size={16} color={colors.primaryForeground} />
                 <Text style={[helpStyles.linkBtnText, { color: colors.primaryForeground }]}>
-                  github.com/Marcseb/lan-backup/releases
+                  github.com/Marcseb/lan-backup
                 </Text>
               </TouchableOpacity>
             </View>
