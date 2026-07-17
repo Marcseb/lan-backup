@@ -2,6 +2,16 @@
 
 Back up files from your phone to your computer over Wi-Fi — no cloud, no account, no cable.
 
+| Feature | What it does |
+|---|---|
+| **Backup** | Transfer files and folders from your phone to your computer |
+| **Restore** *(Pro)* | Send files from your computer back to your phone |
+| **Server Sync** *(Pro)* | Push files from one computer to one or more others over LAN |
+
+Pro features (Restore and Server Sync) require a one-time €5 contribution, unlocked via PayPal directly inside the app.
+
+Source code and updates: [github.com/Marcseb/lan-backup](https://github.com/Marcseb/lan-backup)
+
 ---
 
 ## Quick Start
@@ -53,28 +63,43 @@ This downloads and starts the server automatically. Node.js is installed for you
 
 #### Windows
 
-1. Download **[setup.ps1](https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1)** — right-click the link and choose "Save link as".
-2. Right-click the downloaded file and choose **"Run with PowerShell"**.
-3. If Windows shows a blue security prompt, click **"More info" → "Run anyway"** — the script only installs Node.js and starts the server.
+Open **PowerShell**, paste the command below, and press Enter:
+
+```powershell
+mkdir ~\LAN_backup; cd ~\LAN_backup; Invoke-WebRequest -Uri https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1 -OutFile setup.ps1; powershell.exe -ExecutionPolicy Bypass -File setup.ps1
+```
+
+> If Windows shows a blue security prompt, click **"More info" → "Run anyway"** — the script only installs Node.js and starts the server.
 
 ---
 
-When the server starts for the first time, it prints an **auth token** — a short code you will need in the next step:
+On first launch, the server asks how you want to set your auth token:
 
 ```
-╔════════════════════════════════════════════════════════════╗
-║  LAN Backup — First-time Setup                             ║
-╠════════════════════════════════════════════════════════════╣
-║                                                            ║
-║  Copy this token into the app:                             ║
-║  App → Settings tab → Auth Token field                     ║
-║                                                            ║
-║  Token:  a1b2c3d4e5f6...                                   ║
-║                                                            ║
-╚════════════════════════════════════════════════════════════╝
+  [1]  Generate a secure random token  (recommended)
+  [2]  Enter my own token
 ```
 
-The token is saved automatically — you won't need to copy it again after this.
+Press **Enter** (or type **1**) to generate one automatically. Type **2** to enter your own.
+
+The token is then displayed — **this is the only time it is shown**:
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  Token saved!  Copy it into the app now.                       ║
+╠════════════════════════════════════════════════════════════════╣
+║                                                                ║
+║  App  →  Settings tab  →  Auth Token field                     ║
+║                                                                ║
+║  Token:  a1b2c3d4e5f6...                                       ║
+║                                                                ║
+║  ⚠  This is shown only once.  To view it later, open:         ║
+║     .env  →  look for the LB_TOKEN line.                       ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
+Copy it — you will paste it into the app in the next step. On every restart the server loads the token silently from `.env`; you will not be prompted again.
 
 A **desktop shortcut** is also created so you can start the server with one click in the future.
 
@@ -128,18 +153,30 @@ If the shortcut is missing, you can always re-run the original install command �
 
 ## Restore — send files from computer to phone
 
-The **Restore** tab lets you send files **from your computer to your phone**. This feature requires a one-time €5 contribution (unlocked via PayPal inside the app).
+**Restore** lets you send files **from your computer back to your phone** over Wi-Fi. Like Server Sync, it requires the one-time €5 Pro unlock (via PayPal inside the app).
 
-1. Place the files you want to send inside the **`export/`** sub-folder of your backup directory:
-   ```
-   ~/LAN-Backup/           ← backup root
-   ├── backup/             ← phone → computer
-   └── export/             ← computer → phone  ← put files here
-       ├── photo.jpg
-       └── document.pdf
-   ```
+### Setting up
+
+Place the files you want to send inside the **`export/`** sub-folder of your backup directory:
+
+```
+~/LAN-Backup/
+├── backup/     ← phone → computer  (backed-up files land here)
+└── export/     ← computer → phone  (put files here to send to phone)
+    ├── photo.jpg
+    └── document.pdf
+```
+
+Any file type is supported — photos, documents, videos, archives.
+
+### Downloading to your phone
+
+1. Make sure the companion server is running on your computer.
 2. Open the **Restore** tab in the app.
-3. Select the files you want and tap **Download to phone**.
+3. The app lists everything in `export/` — tap the files you want.
+4. Tap **Download to phone** — files are saved to your phone's local storage.
+
+> To clear the list, delete or move the files out of `export/` after downloading.
 
 ---
 
