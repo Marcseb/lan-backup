@@ -3,9 +3,9 @@
 #
 # What this script does:
 #   1. Checks whether Node.js is installed; installs it if not.
-#   2. Starts the companion server.
-#   3. On first run the server generates a secure token automatically,
-#      saves it to .env, and prints it for you to copy into the app.
+#   2. On first run, asks you to choose an auth token (in bash, so it works
+#      reliably even when started via "curl | bash").
+#   3. Starts the companion server.
 #
 # Usage:
 #   bash install.sh
@@ -95,9 +95,9 @@ install_node_linux() {
     $SUDO zypper install -y nodejs
   else
     echo ""
-    echo "  ❌  Could not detect your package manager."
-    echo "      Please install Node.js manually from https://nodejs.org"
-    echo "      then run:  node server.js"
+    echo "  ERROR: Could not detect your package manager."
+    echo "         Please install Node.js manually from https://nodejs.org"
+    echo "         then run:  node server.js"
     echo ""
     exit 1
   fi
@@ -118,6 +118,78 @@ else
   echo "  ✅  Node.js $(node --version) installed successfully."
 fi
 
+# -- First-run token setup (bash-level) ---------------------------------------
+# Done here in bash rather than in server.js so that "read </dev/tty" works
+# reliably even when this script was launched via a pipe ("curl ... | bash").
+# server.js still has a fallback firstRunSetup() for direct "node server.js"
+# invocations, but install.sh is the canonical path and handles it here.
+
+ENV_FILE="$SCRIPT_DIR/.env"
+
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "  LAN Backup — First-time Setup"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "  Choose an auth token for this server."
+  echo "  You will copy it into the app once — then it is saved."
+  echo ""
+  echo "  [1]  Generate a secure random token  (recommended)"
+  echo "  [2]  Enter my own token"
+  echo ""
+  printf "  Your choice (1 or 2, default 1): "
+  read -r CHOICE </dev/tty || CHOICE=""
+
+  if [[ "$CHOICE" == "2" ]]; then
+    LB_TOKEN_VALUE=""
+    while [[ -z "$LB_TOKEN_VALUE" ]]; do
+      printf "\n  Enter your token: "
+      read -r LB_TOKEN_VALUE </dev/tty || LB_TOKEN_VALUE=""
+      if [[ -z "$LB_TOKEN_VALUE" ]]; then
+        echo "  Token cannot be empty — please try again."
+      fi
+    done
+  else
+    LB_TOKEN_VALUE=$(node -e "process.stdout.write(require('crypto').randomBytes(16).toString('hex'))")
+    echo ""
+    echo "  Generating random token..."
+  fi
+
+  # Write .env
+  {
+    echo "# LAN Backup companion server — configuration"
+    echo "# Auto-generated: $(date -u +%Y-%m-%d 2>/dev/null || date +%Y-%m-%d)"
+    echo "#"
+    echo "# IMPORTANT: copy LB_TOKEN into the LAN Backup app"
+    echo "#            Open the app -> Settings tab -> Auth Token field"
+    echo "#"
+    echo "LB_TOKEN=$LB_TOKEN_VALUE"
+    echo ""
+    echo "# Optional -- remove the # to change a default:"
+    echo "# LB_PORT=7823"
+    if [[ -n "${LB_BACKUP_DIR:-}" ]]; then
+      echo "LB_BACKUP_DIR=$LB_BACKUP_DIR"
+    else
+      echo "# LB_BACKUP_DIR=$HOME/LAN-Backup"
+    fi
+  } > "$ENV_FILE"
+
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "  Token saved!  Copy it into the app now."
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "  App -> Settings tab -> Auth Token field"
+  echo ""
+  echo "  Token:  $LB_TOKEN_VALUE"
+  echo ""
+  echo "  This is shown only once. To view it later:"
+  echo "  open $ENV_FILE and look for LB_TOKEN"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+fi
+
 echo ""
 echo "─────────────────────────────────────────────────"
 echo "  Starting LAN Backup server..."
@@ -125,6 +197,4 @@ echo "  Press Ctrl+C to stop."
 echo "─────────────────────────────────────────────────"
 echo ""
 
-# Redirect stdin from /dev/tty so the first-run token prompt works even when
-# this script was started via a pipe (e.g. "curl ... | bash").
-exec node "$SCRIPT_DIR/server.js" </dev/tty
+exec node "$SCRIPT_DIR/server.js"
