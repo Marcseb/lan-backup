@@ -122,6 +122,15 @@ tar -xzf "$DEST_DIR/companion-server.tar.gz" -C "$DEST_DIR"
 rm -f "$DEST_DIR/companion-server.tar.gz"
 echo "  Extracted to: $DEST_DIR/companion-server"
 
+# Remove any leftover .env from a previous install attempt.
+# tar only writes the files in the archive — it leaves pre-existing files
+# like .env untouched — so without this step a stale token would survive
+# what the user expects to be a completely fresh install.
+if [[ -f "$DEST_DIR/companion-server/.env" ]]; then
+  rm -f "$DEST_DIR/companion-server/.env"
+  echo "  (Removed previous .env — a new auth token will be created now.)"
+fi
+
 # -- Create desktop shortcut --------------------------------------------------
 create_shortcut
 
