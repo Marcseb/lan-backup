@@ -81,7 +81,17 @@ ENDDESKTOP
 # -- Check for already-installed companion server -----------------------------
 if [[ -f "$DEST_DIR/companion-server/server.js" ]]; then
   echo "  Companion server already installed."
-  echo "  Starting it now..."
+  echo ""
+  if [[ -f "$DEST_DIR/companion-server/.env" ]]; then
+    echo "  ✅  Auth token found in companion-server/.env — the server will use it."
+    echo "      To choose a new token, delete that file and run this command again:"
+    echo "      rm companion-server/.env"
+    echo ""
+  else
+    echo "  ℹ️   No .env found — the server will ask you to set an auth token now."
+    echo ""
+  fi
+  echo "  Starting server..."
   echo ""
   create_shortcut
   export LB_BACKUP_DIR="$SETUP_DIR"
