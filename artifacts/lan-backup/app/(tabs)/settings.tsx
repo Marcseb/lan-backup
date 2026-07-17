@@ -545,7 +545,7 @@ export default function SettingsScreen() {
             onChangeText={setLocalToken}
             placeholder="Enter your secret token"
             secure
-            hint="Must match the token set in the companion server"
+            hint="Shown once on first server launch — find it later in the server's .env file (LB_TOKEN)"
           />
         </View>
       </View>
@@ -798,10 +798,10 @@ export default function SettingsScreen() {
           <View style={[styles.infoBox, { backgroundColor: colors.accent }]}>
             <Feather name="info" size={14} color={colors.accentForeground} />
             <Text style={[styles.infoText, { color: colors.accentForeground }]}>
-              Run the companion server on your computer:{"\n"}
-              <Text style={styles.infoCode}>node companion-server/server.js</Text>
-              {"\n"}
-              Set the same auth token there. The server file is included in this project.
+              Install with one command from the project page:{"\n"}
+              <Text style={styles.infoCode}>github.com/Marcseb/lan-backup</Text>
+              {"\n\n"}
+              On first launch the server asks you to set an auth token — copy it into the Auth Token field above. To find it later, open the server's <Text style={styles.infoCode}>.env</Text> file and look for <Text style={styles.infoCode}>LB_TOKEN</Text>.
             </Text>
           </View>
         </View>
