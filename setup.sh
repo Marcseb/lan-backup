@@ -85,7 +85,8 @@ if [[ -f "$DEST_DIR/companion-server/server.js" ]]; then
   echo ""
   create_shortcut
   export LB_BACKUP_DIR="$SETUP_DIR"
-  exec bash "$DEST_DIR/companion-server/install.sh"
+  # Use </dev/tty so the first-run prompt works even when piped via "curl | bash".
+  exec bash "$DEST_DIR/companion-server/install.sh" </dev/tty
 fi
 
 # -- Download -----------------------------------------------------------------
@@ -117,4 +118,5 @@ create_shortcut
 # -- Run installer (pass backup dir so it is saved to .env on first run) ------
 echo ""
 export LB_BACKUP_DIR="$SETUP_DIR"
-exec bash "$DEST_DIR/companion-server/install.sh"
+# Use </dev/tty so the first-run prompt works even when piped via "curl | bash".
+exec bash "$DEST_DIR/companion-server/install.sh" </dev/tty
