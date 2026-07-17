@@ -125,4 +125,6 @@ echo "  Press Ctrl+C to stop."
 echo "─────────────────────────────────────────────────"
 echo ""
 
-exec node "$SCRIPT_DIR/server.js"
+# Redirect stdin from /dev/tty so the first-run token prompt works even when
+# this script was started via a pipe (e.g. "curl ... | bash").
+exec node "$SCRIPT_DIR/server.js" </dev/tty
