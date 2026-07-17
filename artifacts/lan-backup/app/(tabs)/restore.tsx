@@ -157,18 +157,34 @@ function PaywallScreen() {
       <View style={[styles.paywallCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View style={[styles.paywallIconBg, { backgroundColor: "#003087" + "22" }]}>
-            <Feather name="download-cloud" size={22} color="#003087" />
+            <Feather name="star" size={22} color="#003087" />
           </View>
           <Text style={[styles.paywallTitle, { color: colors.foreground, textAlign: "left" }]}>
-            Restore — Desktop to Phone
+            Pro Features — One-time €5
           </Text>
         </View>
 
         <Text style={[styles.paywallBody, { color: colors.mutedForeground, textAlign: "left" }]}>
-          Download files from your computer's{" "}
-          <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>export/</Text>{" "}
-          folder directly to your phone. One-time €5 contribution, unlocked permanently.
+          A single contribution unlocks two features permanently:
         </Text>
+        <View style={{ gap: 6, marginTop: 2 }}>
+          <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+            <Feather name="download-cloud" size={15} color="#003087" style={{ marginTop: 2 }} />
+            <Text style={[styles.paywallBody, { color: colors.mutedForeground, textAlign: "left", flex: 1, marginTop: 0 }]}>
+              <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>Restore</Text>
+              {" "}— download files from your computer's{" "}
+              <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>export/</Text>{" "}
+              folder back to your phone.
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+            <Feather name="refresh-cw" size={15} color="#003087" style={{ marginTop: 2 }} />
+            <Text style={[styles.paywallBody, { color: colors.mutedForeground, textAlign: "left", flex: 1, marginTop: 0 }]}>
+              <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>Server Sync</Text>
+              {" "}— push files from one computer's export/ folder to one or more other computers on the same network. Phone acts as controller only.
+            </Text>
+          </View>
+        </View>
 
         <TouchableOpacity
           style={[styles.paywallPayBtn, { backgroundColor: "#003087" }]}

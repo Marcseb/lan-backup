@@ -213,6 +213,64 @@ export async function downloadExportFile(
   }
 }
 
+// ── Peer-to-peer server sync ──────────────────────────────────────────────────
+
+export interface PeerSyncDestination {
+  url: string;
+  token: string;
+  fingerprint: string | null;
+}
+
+export interface PeerTransferStart {
+  transferId: string;
+  files: string[];
+  destinations: string[];
+}
+
+export interface PeerFileProgress {
+  done: boolean;
+  error: string | null;
+}
+
+export interface PeerTransferStatus {
+  status: "running" | "done" | "error";
+  sourceFiles: string[];
+  destinations: string[];
+  progress: Record<string, Record<string, PeerFileProgress>>;
+  startedAt: number;
+  error: string | null;
+}
+
+export async function startPeerSync(
+  settings: Settings,
+  destinations: PeerSyncDestination[]
+): Promise<PeerTransferStart> {
+  const res = await fetch(`${baseUrl(settings)}/peer-transfer`, {
+    method: "POST",
+    headers: { ...authHeaders(settings), "Content-Type": "application/json" },
+    body: JSON.stringify({ destinations }),
+  });
+  if (res.status === 401) throw new Error("Unauthorized — check your auth token");
+  if (res.status === 409) throw new Error("A peer transfer is already in progress on this server");
+  if (!res.ok) {
+    let msg = `Server error: ${res.status}`;
+    try { const d = (await res.json()) as { error?: string }; if (d.error) msg = d.error; } catch { }
+    throw new Error(msg);
+  }
+  return (await res.json()) as PeerTransferStart;
+}
+
+export async function pollPeerSync(
+  settings: Settings,
+  transferId: string
+): Promise<PeerTransferStatus> {
+  const res = await fetch(`${baseUrl(settings)}/peer-transfer/${encodeURIComponent(transferId)}`, {
+    headers: authHeaders(settings),
+  });
+  if (!res.ok) throw new Error(`Poll failed: ${res.status}`);
+  return (await res.json()) as PeerTransferStatus;
+}
+
 export interface UploadResult {
   filename: string;
   size: number;

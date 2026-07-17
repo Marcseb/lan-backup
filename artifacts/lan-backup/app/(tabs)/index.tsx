@@ -7,6 +7,7 @@ import * as Haptics from "expo-haptics";
 import { router, useNavigation } from "expo-router";
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Linking,
   Modal,
@@ -24,8 +25,15 @@ import { ServerStatusCard } from "@/components/ServerStatusCard";
 import { useSettings } from "@/context/SettingsContext";
 import { type SelectedFile, useTransfer } from "@/context/TransferContext";
 import { useColors } from "@/hooks/useColors";
-import type { DiskInfo } from "@/utils/serverApi";
-import { compressImageIfNeeded, getDiskInfo, pingServer, uploadFile } from "@/utils/serverApi";
+import type { DiskInfo, PeerTransferStatus } from "@/utils/serverApi";
+import {
+  compressImageIfNeeded,
+  getDiskInfo,
+  pingServer,
+  uploadFile,
+  startPeerSync,
+  pollPeerSync,
+} from "@/utils/serverApi";
 
 interface FileProgress {
   progress: number | null;
@@ -58,6 +66,14 @@ export default function BackupScreen() {
   const [showHelp, setShowHelp] = useState(false);
   const cancelRef = useRef(false);
   const scanCancelledRef = useRef(false);
+
+  // ── Sync mode state ──
+  const [tabMode, setTabMode] = useState<"backup" | "sync">("backup");
+  const [syncStatus, setSyncStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [syncTransferId, setSyncTransferId] = useState<string | null>(null);
+  const [syncProgress, setSyncProgress] = useState<PeerTransferStatus | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const syncPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const navigation = useNavigation();
   useLayoutEffect(() => {
@@ -178,14 +194,8 @@ export default function BackupScreen() {
   const pickFiles = useCallback(() => {
     if (Platform.OS === "ios") {
       Alert.alert("Add files", "Where do you want to pick from?", [
-        {
-          text: "Photos & Videos",
-          onPress: pickFromPhotos,
-        },
-        {
-          text: "Files (iCloud / On My iPhone)",
-          onPress: pickFromFiles,
-        },
+        { text: "Photos & Videos", onPress: pickFromPhotos },
+        { text: "Files (iCloud / On My iPhone)", onPress: pickFromFiles },
         { text: "Cancel", style: "cancel" },
       ]);
     } else {
@@ -207,46 +217,27 @@ export default function BackupScreen() {
     }
     scanCancelledRef.current = false;
     try {
-      const permission =
-        await StorageAccessFramework.requestDirectoryPermissionsAsync();
+      const permission = await StorageAccessFramework.requestDirectoryPermissionsAsync();
       if (!permission.granted) return;
 
       setIsScanning(true);
       const newFiles: SelectedFile[] = [];
       let skipped = 0;
 
-      // Derive the selected folder's display name from the granted tree URI.
-      // Tree URIs look like: .../tree/primary%3ADCIM%2FCamera
-      // Decoded last segment may be "primary:DCIM/Camera" (nested) or "primary:Camera" (root-level).
       const decodedRoot = decodeURIComponent(permission.directoryUri);
       const rootLastSeg = decodedRoot.split("/").pop() || "backup";
       const rootFolderName = rootLastSeg.includes(":")
         ? rootLastSeg.split(":").pop()!
         : rootLastSeg;
 
-      // Recursively collect all files under a SAF directory URI.
-      //
-      // legacyGetInfoAsync.isDirectory is unreliable for SAF document URIs — it
-      // often returns false even for real directories.  Instead we probe each
-      // entry by attempting readDirectoryAsync: success → directory (recurse);
-      // exception → file (add to list).
-      //
-      // parentRelPath is the relative path of the PARENT directory, e.g. "Camera/SubFolder".
-      // Each file gets relativePath = "Camera/SubFolder/photo.jpg" which the server
-      // uses to recreate the exact folder structure.
-      const processEntry = async (
-        uri: string,
-        depth: number,
-        parentRelPath: string
-      ): Promise<void> => {
-        if (depth > 20) return; // guard against extremely deep trees
+      const processEntry = async (uri: string, depth: number, parentRelPath: string): Promise<void> => {
+        if (depth > 20) return;
         if (scanCancelledRef.current) return;
 
         const decoded = decodeURIComponent(uri);
         const entryName = decoded.split("/").pop() || "item";
         const currentRelPath = `${parentRelPath}/${entryName}`;
 
-        // --- try as directory ---
         let children: string[] | null = null;
         try {
           children = await StorageAccessFramework.readDirectoryAsync(uri);
@@ -261,13 +252,9 @@ export default function BackupScreen() {
           return;
         }
 
-        // --- treat as file ---
         try {
           const info = await legacyGetInfoAsync(uri);
-          if (!info.exists) {
-            skipped++;
-            return;
-          }
+          if (!info.exists) { skipped++; return; }
           const size = (info as { size?: number }).size ?? 0;
           newFiles.push({ uri, name: entryName, size, relativePath: currentRelPath });
         } catch {
@@ -275,12 +262,9 @@ export default function BackupScreen() {
         }
       };
 
-      // Seed the traversal from the granted root
       let rootEntries: string[] = [];
       try {
-        rootEntries = await StorageAccessFramework.readDirectoryAsync(
-          permission.directoryUri
-        );
+        rootEntries = await StorageAccessFramework.readDirectoryAsync(permission.directoryUri);
       } catch (e) {
         Alert.alert("Folder Error", `Could not read folder: ${String(e)}`);
         return;
@@ -309,10 +293,7 @@ export default function BackupScreen() {
 
       const subfolderNote = skipped > 0 ? ` (${skipped} item(s) skipped)` : "";
       if (newFiles.length > 0) {
-        Alert.alert(
-          "Folder scanned",
-          `${newFiles.length} file(s) found across all sub-folders.${subfolderNote}`
-        );
+        Alert.alert("Folder scanned", `${newFiles.length} file(s) found across all sub-folders.${subfolderNote}`);
       }
     } catch (e) {
       if (!scanCancelledRef.current) {
@@ -385,7 +366,7 @@ export default function BackupScreen() {
       }
     }
 
-    const finalStatus = cancelRef.current
+    const finalStatus: "cancelled" | "error" | "success" = cancelRef.current
       ? "cancelled"
       : failedFiles.length > 0 && successFiles.length === 0
       ? "error"
@@ -431,9 +412,71 @@ export default function BackupScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
   }, []);
 
+  // ── Server Sync polling ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (syncStatus !== "running" || !syncTransferId) {
+      if (syncPollRef.current !== null) {
+        clearInterval(syncPollRef.current);
+        syncPollRef.current = null;
+      }
+      return;
+    }
+    syncPollRef.current = setInterval(async () => {
+      try {
+        const s = await pollPeerSync(settings, syncTransferId);
+        setSyncProgress(s);
+        if (s.status !== "running") {
+          setSyncStatus(s.status as "done" | "error");
+          if (syncPollRef.current !== null) {
+            clearInterval(syncPollRef.current);
+            syncPollRef.current = null;
+          }
+          Haptics.notificationAsync(
+            s.status === "done"
+              ? Haptics.NotificationFeedbackType.Success
+              : Haptics.NotificationFeedbackType.Error
+          );
+        }
+      } catch {
+        // network hiccup — keep polling
+      }
+    }, 1500);
+    return () => {
+      if (syncPollRef.current !== null) {
+        clearInterval(syncPollRef.current);
+        syncPollRef.current = null;
+      }
+    };
+  }, [syncStatus, syncTransferId, settings]);
+
+  const startSync = useCallback(async () => {
+    if (!isConfigured || connected !== true) return;
+    setSyncError(null);
+    setSyncProgress(null);
+    setSyncTransferId(null);
+    setSyncStatus("running");
+    try {
+      const destinations = settings.peerServers.map((p) => ({
+        url: `http://${p.ip.trim()}:${p.port.trim()}`,
+        token: p.token,
+        fingerprint: p.fingerprint,
+      }));
+      const result = await startPeerSync(settings, destinations);
+      setSyncTransferId(result.transferId);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (e) {
+      setSyncStatus("error");
+      setSyncError(String(e).replace(/^Error:\s*/, ""));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  }, [isConfigured, connected, settings]);
+
+  // Derived values
   const isRunning = status === "running";
   const totalBytes = selectedFiles.reduce((a, f) => a + f.size, 0);
   const canBackup = isConfigured && connected === true && selectedFiles.length > 0 && !isRunning;
+  const hasPeers = settings.restoreUnlocked && settings.peerServers.length > 0;
+  const canStartSync = isConfigured && connected === true && syncStatus !== "running";
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -447,6 +490,7 @@ export default function BackupScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Server status */}
         {!isConfigured ? (
           <View style={[styles.setupCard, { backgroundColor: colors.accent, borderColor: colors.accentForeground }]}>
             <Feather name="settings" size={24} color={colors.accentForeground} />
@@ -477,55 +521,199 @@ export default function BackupScreen() {
           />
         )}
 
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-            Selected Files
-          </Text>
-          {selectedFiles.length > 0 && !isRunning && (
+        {/* Mode toggle — only visible when pro unlocked and peers configured */}
+        {hasPeers && (
+          <View style={[syncStyles.modeToggle, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <TouchableOpacity
-              onPress={() => {
-                setSelectedFiles([]);
-                setFileProgress({});
-              }}
+              style={[syncStyles.modeBtn, tabMode === "backup" && { backgroundColor: colors.primary }]}
+              onPress={() => setTabMode("backup")}
+              activeOpacity={0.8}
             >
-              <Text style={[styles.clearText, { color: colors.destructive }]}>Clear</Text>
+              <Feather
+                name="upload-cloud"
+                size={14}
+                color={tabMode === "backup" ? colors.primaryForeground : colors.mutedForeground}
+              />
+              <Text style={[syncStyles.modeBtnText, { color: tabMode === "backup" ? colors.primaryForeground : colors.mutedForeground }]}>
+                Backup
+              </Text>
             </TouchableOpacity>
-          )}
-        </View>
-
-        {selectedFiles.length === 0 ? (
-          <View style={[styles.emptyFiles, { borderColor: colors.border }]}>
-            <Feather name="inbox" size={32} color={colors.mutedForeground} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              No files selected
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.fileList}>
-            {selectedFiles.map((file) => {
-              const fp = fileProgress[file.uri];
-              return (
-                <FileListItem
-                  key={file.uri}
-                  file={file}
-                  onRemove={!isRunning ? () => removeFile(file.uri) : undefined}
-                  progress={fp?.progress ?? null}
-                  done={fp?.done ?? false}
-                  error={fp?.error ?? null}
-                />
-              );
-            })}
+            <TouchableOpacity
+              style={[syncStyles.modeBtn, tabMode === "sync" && { backgroundColor: colors.primary }]}
+              onPress={() => setTabMode("sync")}
+              activeOpacity={0.8}
+            >
+              <Feather
+                name="refresh-cw"
+                size={14}
+                color={tabMode === "sync" ? colors.primaryForeground : colors.mutedForeground}
+              />
+              <Text style={[syncStyles.modeBtnText, { color: tabMode === "sync" ? colors.primaryForeground : colors.mutedForeground }]}>
+                Server Sync
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
-        {selectedFiles.length > 0 && (
-          <Text style={[styles.totalSize, { color: colors.mutedForeground }]}>
-            Total: {selectedFiles.length} {selectedFiles.length === 1 ? "file" : "files"} — {" "}
-            {(totalBytes / 1024 / 1024).toFixed(1)} MB
-          </Text>
+        {/* ── Backup mode content ── */}
+        {tabMode === "backup" && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+                Selected Files
+              </Text>
+              {selectedFiles.length > 0 && !isRunning && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedFiles([]);
+                    setFileProgress({});
+                  }}
+                >
+                  <Text style={[styles.clearText, { color: colors.destructive }]}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {selectedFiles.length === 0 ? (
+              <View style={[styles.emptyFiles, { borderColor: colors.border }]}>
+                <Feather name="inbox" size={32} color={colors.mutedForeground} />
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                  No files selected
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.fileList}>
+                {selectedFiles.map((file) => {
+                  const fp = fileProgress[file.uri];
+                  return (
+                    <FileListItem
+                      key={file.uri}
+                      file={file}
+                      onRemove={!isRunning ? () => removeFile(file.uri) : undefined}
+                      progress={fp?.progress ?? null}
+                      done={fp?.done ?? false}
+                      error={fp?.error ?? null}
+                    />
+                  );
+                })}
+              </View>
+            )}
+
+            {selectedFiles.length > 0 && (
+              <Text style={[styles.totalSize, { color: colors.mutedForeground }]}>
+                Total: {selectedFiles.length} {selectedFiles.length === 1 ? "file" : "files"} —{" "}
+                {(totalBytes / 1024 / 1024).toFixed(1)} MB
+              </Text>
+            )}
+          </>
+        )}
+
+        {/* ── Sync mode content ── */}
+        {tabMode === "sync" && (
+          <View style={{ gap: 12 }}>
+            {/* Source */}
+            <View style={{ gap: 6 }}>
+              <Text style={[syncStyles.sectionLabel, { color: colors.mutedForeground }]}>SOURCE</Text>
+              <View style={[syncStyles.serverCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={[syncStyles.roleBadge, { backgroundColor: colors.primary }]}>
+                  <Feather name="upload" size={12} color={colors.primaryForeground} />
+                  <Text style={[syncStyles.roleBadgeText, { color: colors.primaryForeground }]}>SOURCE</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[syncStyles.serverName, { color: colors.foreground }]}>
+                    {settings.serverIp}:{settings.serverPort}
+                  </Text>
+                  <Text style={[syncStyles.serverSub, { color: colors.mutedForeground }]}>
+                    Sends files from its <Text style={{ fontFamily: "Inter_600SemiBold" }}>export/</Text> folder
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Destinations */}
+            <View style={{ gap: 6 }}>
+              <Text style={[syncStyles.sectionLabel, { color: colors.mutedForeground }]}>
+                DESTINATIONS ({settings.peerServers.length})
+              </Text>
+              {settings.peerServers.map((peer) => {
+                const peerUrl = `http://${peer.ip.trim()}:${peer.port.trim()}`;
+                const peerProg = syncProgress?.progress?.[peerUrl];
+                const fileList = syncProgress?.sourceFiles ?? [];
+                const doneCnt = fileList.filter((f) => peerProg?.[f]?.done && !peerProg?.[f]?.error).length;
+                const errCnt = fileList.filter((f) => peerProg?.[f]?.error).length;
+                const totalCnt = fileList.length;
+                const pct = totalCnt > 0 ? Math.round((doneCnt / totalCnt) * 100) : 0;
+
+                return (
+                  <View key={peer.id} style={[syncStyles.serverCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View style={[syncStyles.roleBadge, { backgroundColor: colors.success }]}>
+                      <Feather name="download" size={12} color="#fff" />
+                      <Text style={[syncStyles.roleBadgeText, { color: "#fff" }]}>DEST</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[syncStyles.serverName, { color: colors.foreground }]}>{peer.name}</Text>
+                      <Text style={[syncStyles.serverSub, { color: colors.mutedForeground }]}>
+                        {peer.ip}:{peer.port}
+                      </Text>
+                      {syncStatus === "running" && totalCnt > 0 && (
+                        <View style={{ marginTop: 6, gap: 3 }}>
+                          <View style={[syncStyles.progressTrack, { backgroundColor: colors.border }]}>
+                            <View
+                              style={[
+                                syncStyles.progressFill,
+                                { backgroundColor: colors.primary, width: `${pct}%` as `${number}%` },
+                              ]}
+                            />
+                          </View>
+                          <Text style={[syncStyles.progressText, { color: colors.mutedForeground }]}>
+                            {doneCnt}/{totalCnt} files{errCnt > 0 ? ` · ${errCnt} error(s)` : ""}
+                          </Text>
+                        </View>
+                      )}
+                      {(syncStatus === "done" || syncStatus === "error") && totalCnt > 0 && (
+                        <Text style={[syncStyles.progressText, { color: errCnt > 0 ? "#dc2626" : colors.success, marginTop: 4 }]}>
+                          {errCnt > 0 ? `${errCnt} error(s) · ${doneCnt} succeeded` : `${doneCnt} files synced ✓`}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Error banner */}
+            {syncError && (
+              <View style={[syncStyles.errorBox, { backgroundColor: "#fee2e2", borderColor: "#fca5a5" }]}>
+                <Feather name="alert-circle" size={14} color="#dc2626" style={{ marginTop: 1 }} />
+                <Text style={[syncStyles.errorText, { color: "#dc2626" }]}>{syncError}</Text>
+              </View>
+            )}
+
+            {/* Done banner */}
+            {syncStatus === "done" && !syncError && (
+              <View style={[syncStyles.errorBox, { backgroundColor: colors.successLight ?? "#f0fdf4", borderColor: colors.success }]}>
+                <Feather name="check-circle" size={14} color={colors.success} style={{ marginTop: 1 }} />
+                <Text style={[syncStyles.errorText, { color: colors.success }]}>Sync complete</Text>
+              </View>
+            )}
+
+            {/* Info hint when idle */}
+            {syncStatus === "idle" && (
+              <View style={[syncStyles.infoBox, { backgroundColor: colors.accent, borderColor: colors.border }]}>
+                <Feather name="info" size={13} color={colors.accentForeground} />
+                <Text style={[syncStyles.infoText, { color: colors.accentForeground }]}>
+                  Files in the source server's{" "}
+                  <Text style={{ fontFamily: "Inter_600SemiBold" }}>export/</Text> folder will be
+                  copied to all destination servers' <Text style={{ fontFamily: "Inter_600SemiBold" }}>backup/</Text> folder.
+                  The phone acts as controller — files travel directly between computers.
+                </Text>
+              </View>
+            )}
+          </View>
         )}
       </ScrollView>
 
+      {/* ── Footer ── */}
       <View
         style={[
           styles.footer,
@@ -537,7 +725,45 @@ export default function BackupScreen() {
           },
         ]}
       >
-        {!isRunning ? (
+        {tabMode === "sync" ? (
+          /* Sync footer */
+          syncStatus === "running" ? (
+            <View style={syncStyles.runningRow}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={[syncStyles.runningText, { color: colors.foreground }]}>
+                Syncing… check progress above
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.backupBtn,
+                {
+                  backgroundColor: canStartSync ? colors.primary : colors.secondary,
+                  flex: 1,
+                },
+              ]}
+              onPress={startSync}
+              disabled={!canStartSync}
+              activeOpacity={0.8}
+            >
+              <Feather
+                name="refresh-cw"
+                size={20}
+                color={canStartSync ? colors.primaryForeground : colors.mutedForeground}
+              />
+              <Text
+                style={[
+                  styles.backupBtnText,
+                  { color: canStartSync ? colors.primaryForeground : colors.mutedForeground },
+                ]}
+              >
+                {syncStatus === "done" ? "Sync Again" : syncStatus === "error" ? "Retry Sync" : "Start Sync"}
+              </Text>
+            </TouchableOpacity>
+          )
+        ) : !isRunning ? (
+          /* Backup footer — unchanged */
           <View style={styles.footerRow}>
             <TouchableOpacity
               style={[styles.pickBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
@@ -642,7 +868,6 @@ export default function BackupScreen() {
 
           <ScrollView contentContainerStyle={helpStyles.body} showsVerticalScrollIndicator={false}>
 
-            {/* What is LAN Backup */}
             <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
               <View style={helpStyles.sectionTitleRow}>
                 <Feather name="smartphone" size={18} color={colors.primary} />
@@ -654,7 +879,6 @@ export default function BackupScreen() {
               </Text>
             </View>
 
-            {/* Installation */}
             <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
               <View style={helpStyles.sectionTitleRow}>
                 <Feather name="monitor" size={18} color={colors.primary} />
@@ -672,7 +896,6 @@ export default function BackupScreen() {
               <Text style={[helpStyles.step, { color: colors.foreground }]}>4. Keep the terminal open while doing backups.</Text>
             </View>
 
-            {/* Settings */}
             <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
               <View style={helpStyles.sectionTitleRow}>
                 <Feather name="settings" size={18} color={colors.primary} />
@@ -690,7 +913,6 @@ export default function BackupScreen() {
               </Text>
             </View>
 
-            {/* Image Compression */}
             <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
               <View style={helpStyles.sectionTitleRow}>
                 <Feather name="minimize-2" size={18} color={colors.primary} />
@@ -709,7 +931,23 @@ export default function BackupScreen() {
               </Text>
             </View>
 
-            {/* Download & Support */}
+            <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <View style={helpStyles.sectionTitleRow}>
+                <Feather name="refresh-cw" size={18} color={colors.primary} />
+                <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Server Sync (Pro)</Text>
+              </View>
+              <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
+                Server Sync lets you push files from one computer to one or more other computers on the same network — all without the phone carrying any data.
+              </Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>1. Unlock Pro features via the Restore tab (one-time €5).</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>2. In Settings → Peer Servers, add the destination computer(s).</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>3. Place files you want to sync in the source computer's <Text style={helpStyles.code}>export/</Text> folder.</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>4. On the Backup tab, tap <Text style={helpStyles.code}>Server Sync</Text> then <Text style={helpStyles.code}>Start Sync</Text>.</Text>
+              <Text style={[helpStyles.tip, { color: colors.mutedForeground, borderLeftColor: colors.primary }]}>
+                💡 Files land in the destination server's <Text style={{ fontFamily: "Inter_600SemiBold" }}>backup/</Text> folder. The phone is only a controller — no data passes through it.
+              </Text>
+            </View>
+
             <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
               <View style={helpStyles.sectionTitleRow}>
                 <Feather name="download" size={18} color={colors.primary} />
@@ -870,24 +1108,130 @@ const styles = StyleSheet.create({
   },
 });
 
+const syncStyles = StyleSheet.create({
+  modeToggle: {
+    flexDirection: "row",
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 4,
+    gap: 4,
+  },
+  modeBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 9,
+  },
+  modeBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.8,
+    paddingHorizontal: 4,
+  },
+  serverCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  roleBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.5,
+  },
+  serverName: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+  serverSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  progressTrack: {
+    height: 3,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: 3,
+    borderRadius: 2,
+  },
+  progressText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  errorBox: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "flex-start",
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 18,
+  },
+  infoBox: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "flex-start",
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
+  },
+  runningRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 50,
+    gap: 10,
+  },
+  runningText: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+  },
+});
+
 const helpStyles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
-  title: {
-    fontSize: 20,
-    fontFamily: "Inter_700Bold",
-  },
-  body: {
-    padding: 16,
-    gap: 16,
-  },
+  title: { fontSize: 20, fontFamily: "Inter_700Bold" },
+  body: { padding: 20, gap: 16 },
   section: {
     borderRadius: 14,
     borderWidth: 1,
@@ -897,55 +1241,50 @@ const helpStyles = StyleSheet.create({
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: "Inter_700Bold",
-    flexShrink: 1,
   },
   body2: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-    lineHeight: 22,
+    lineHeight: 20,
   },
   step: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 21,
-  },
-  code: {
-    fontFamily: "monospace",
     fontSize: 13,
-  },
-  codeBlock: {
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 12,
-    marginVertical: 2,
-  },
-  codeText: {
-    fontFamily: "monospace",
-    fontSize: 12,
-    lineHeight: 18,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 19,
   },
   tip: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    lineHeight: 20,
+    lineHeight: 18,
     borderLeftWidth: 3,
     paddingLeft: 10,
-    marginTop: 4,
+    paddingVertical: 4,
+  },
+  code: {
+    fontFamily: "Inter_600SemiBold",
+  },
+  codeBlock: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  codeText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    lineHeight: 18,
   },
   linkBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 10,
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginTop: 4,
+    borderRadius: 10,
   },
   linkBtnText: {
     fontSize: 14,

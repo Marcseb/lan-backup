@@ -156,6 +156,128 @@ if (fs.existsSync(SERVER_ID_FILE)) {
   fs.writeFileSync(SERVER_ID_FILE, SERVER_ID, "utf8");
 }
 
+// ── Peer Transfer State ───────────────────────────────────────────────────────
+// In-memory map of active/recent peer-to-peer transfers.
+// Entries are removed automatically 10 minutes after completion.
+const peerTransfers = new Map();
+
+// SSRF guard: only allow RFC 1918 LAN addresses as peer destinations.
+// Also accepts loopback (127.x) for local dev/testing.
+function isLanIp(urlOrIp) {
+  let ip = urlOrIp;
+  try { ip = new URL(urlOrIp).hostname; } catch {
+    ip = urlOrIp.replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
+  }
+  const parts = ip.split(".");
+  if (parts.length !== 4) return false;
+  const n = parts.map(Number);
+  if (n.some((x) => isNaN(x) || x < 0 || x > 255)) return false;
+  if (n[0] === 10) return true;
+  if (n[0] === 172 && n[1] >= 16 && n[1] <= 31) return true;
+  if (n[0] === 192 && n[1] === 168) return true;
+  if (n[0] === 127) return true;
+  return false;
+}
+
+// Runs asynchronously after POST /peer-transfer responds.
+// Verifies TOFU fingerprints, then pushes every export file to every destination.
+async function runPeerTransfer(transferId, destinations, exportFiles) {
+  const state = peerTransfers.get(transferId);
+  if (!state) return;
+
+  try {
+    // Step 1 — TOFU verification for each destination
+    for (const dest of destinations) {
+      if (dest.fingerprint) {
+        let pingData;
+        try {
+          const pingRes = await fetch(`${dest.url}/ping`, {
+            signal: AbortSignal.timeout(5000),
+          });
+          if (!pingRes.ok) throw new Error(`HTTP ${pingRes.status}`);
+          pingData = await pingRes.json();
+        } catch (e) {
+          throw new Error(`Cannot reach ${dest.url}: ${e.message}`);
+        }
+        if (pingData.id !== dest.fingerprint) {
+          throw new Error(
+            `Server fingerprint mismatch at ${dest.url} — possible impersonation. ` +
+            `Re-add the peer server in the app to re-establish trust.`
+          );
+        }
+      }
+    }
+
+    // Step 2 — Push each export file to all destinations in parallel per file
+    for (const filename of exportFiles) {
+      const filePath = path.join(EXPORT_DIR, filename);
+      let fileData;
+      try {
+        fileData = fs.readFileSync(filePath);
+      } catch (e) {
+        for (const dest of destinations) {
+          const prog = state.progress[dest.url]?.[filename];
+          if (prog) { prog.error = `Cannot read file: ${e.message}`; prog.done = true; }
+        }
+        continue;
+      }
+
+      await Promise.all(
+        destinations.map(async (dest) => {
+          const prog = state.progress[dest.url]?.[filename];
+          if (!prog) return;
+          try {
+            // Build multipart body manually for maximum compatibility
+            // with the destination's custom parser.
+            const boundary = `LBSync${crypto.randomBytes(8).toString("hex")}`;
+            const CRLF = "\r\n";
+            const body = Buffer.concat([
+              Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="targetFolder"${CRLF}${CRLF}backup${CRLF}`),
+              Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="filename"${CRLF}${CRLF}${filename}${CRLF}`),
+              Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="file"; filename="${filename}"${CRLF}Content-Type: application/octet-stream${CRLF}${CRLF}`),
+              fileData,
+              Buffer.from(`${CRLF}--${boundary}--${CRLF}`),
+            ]);
+
+            const uploadRes = await fetch(`${dest.url}/upload`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${dest.token}`,
+                "X-Client": "LAN-Backup/1.0",
+                "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                "Content-Length": String(body.length),
+              },
+              body,
+              signal: AbortSignal.timeout(120_000),
+            });
+
+            if (!uploadRes.ok) {
+              const txt = await uploadRes.text().catch(() => String(uploadRes.status));
+              throw new Error(`Upload failed: ${uploadRes.status} — ${txt.slice(0, 200)}`);
+            }
+            prog.done = true;
+            console.log(`[SYNC] ${filename} → ${dest.url} OK (${fileData.length} bytes)`);
+          } catch (e) {
+            prog.error = String(e).replace(/^Error:\s*/, "");
+            prog.done = true;
+            console.log(`[SYNC] ${filename} → ${dest.url} FAILED: ${prog.error}`);
+          }
+        })
+      );
+    }
+
+    state.status = "done";
+    console.log(`[SYNC] Transfer ${transferId} complete`);
+  } catch (e) {
+    state.status = "error";
+    state.error = String(e).replace(/^Error:\s*/, "");
+    console.log(`[SYNC] Transfer ${transferId} failed: ${state.error}`);
+  }
+
+  // Clean up after 10 minutes to prevent memory growth
+  setTimeout(() => peerTransfers.delete(transferId), 10 * 60 * 1000);
+}
+
 // ── Rate Limiter ─────────────────────────────────────────────────────────────
 const rateLimitMap = new Map();
 
@@ -500,6 +622,94 @@ const server = http.createServer((req, res) => {
     fs.createReadStream(filePath).pipe(res);
     console.log(`[EXPORT] ${name} → ${filePath} (${stat.size} bytes)`);
     return;
+  }
+
+  // POST /peer-transfer — start server-to-server sync (auth required)
+  if (req.method === "POST" && url.pathname === "/peer-transfer") {
+    if (!isAuthorized(req)) return json(res, 401, { error: "Unauthorized" });
+
+    const alreadyRunning = [...peerTransfers.values()].some((t) => t.status === "running");
+    if (alreadyRunning) return json(res, 409, { error: "A peer transfer is already in progress" });
+
+    let body = "";
+    req.on("data", (c) => { body += c; });
+    req.on("end", () => {
+      let parsed;
+      try { parsed = JSON.parse(body); } catch { return json(res, 400, { error: "Invalid JSON body" }); }
+
+      const { destinations } = parsed;
+      if (!Array.isArray(destinations) || destinations.length === 0) {
+        return json(res, 400, { error: "destinations must be a non-empty array" });
+      }
+
+      for (const dest of destinations) {
+        if (!dest.url || typeof dest.url !== "string") {
+          return json(res, 400, { error: "Each destination must have a url string" });
+        }
+        if (!dest.token || typeof dest.token !== "string") {
+          return json(res, 400, { error: "Each destination must have a token string" });
+        }
+        if (!isLanIp(dest.url)) {
+          return json(res, 400, { error: `Destination ${dest.url} is not a LAN (RFC 1918) address. Only local network addresses are allowed.` });
+        }
+      }
+
+      let exportFiles;
+      try {
+        exportFiles = fs.readdirSync(EXPORT_DIR, { withFileTypes: true })
+          .filter((e) => {
+            if (!e.isFile() || e.name.startsWith(".")) return false;
+            try { return fs.lstatSync(path.join(EXPORT_DIR, e.name)).isFile(); } catch { return false; }
+          })
+          .map((e) => e.name);
+      } catch (e) {
+        return json(res, 500, { error: "Cannot read export folder: " + String(e) });
+      }
+
+      if (exportFiles.length === 0) {
+        return json(res, 400, { error: "Export folder is empty — add files to the export/ folder on this server and try again" });
+      }
+
+      const transferId = crypto.randomBytes(8).toString("hex");
+      const progress = {};
+      for (const dest of destinations) {
+        progress[dest.url] = {};
+        for (const f of exportFiles) {
+          progress[dest.url][f] = { done: false, error: null };
+        }
+      }
+
+      peerTransfers.set(transferId, {
+        status: "running",
+        sourceFiles: exportFiles,
+        destinations: destinations.map((d) => d.url),
+        progress,
+        startedAt: Date.now(),
+        error: null,
+      });
+
+      console.log(`[SYNC] Starting transfer ${transferId}: ${exportFiles.length} file(s) → ${destinations.length} destination(s)`);
+
+      // Fire and forget — runs in background while response is sent
+      runPeerTransfer(transferId, destinations, exportFiles);
+
+      return json(res, 200, {
+        transferId,
+        files: exportFiles,
+        destinations: destinations.map((d) => d.url),
+      });
+    });
+    req.on("error", () => json(res, 400, { error: "Request error" }));
+    return;
+  }
+
+  // GET /peer-transfer/:id — poll transfer progress (auth required)
+  if (req.method === "GET" && url.pathname.startsWith("/peer-transfer/")) {
+    if (!isAuthorized(req)) return json(res, 401, { error: "Unauthorized" });
+    const transferId = url.pathname.slice("/peer-transfer/".length);
+    const state = peerTransfers.get(transferId);
+    if (!state) return json(res, 404, { error: "Transfer not found or expired" });
+    return json(res, 200, state);
   }
 
   json(res, 404, { error: "Not found" });

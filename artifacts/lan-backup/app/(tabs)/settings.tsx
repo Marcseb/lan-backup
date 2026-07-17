@@ -15,7 +15,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSettings } from "@/context/SettingsContext";
+import { type PeerServer, useSettings } from "@/context/SettingsContext";
 import { useColors } from "@/hooks/useColors";
 import { discoverServers, getDiskInfo, pingServer, type DiscoveredServer } from "@/utils/serverApi";
 
@@ -81,7 +81,7 @@ function SettingsField({
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { settings, saveAllSettings, clearFingerprint, updateSetting } = useSettings();
+  const { settings, saveAllSettings, clearFingerprint, updateSetting, savePeerServers } = useSettings();
 
   const [localIp, setLocalIp] = useState(settings.serverIp);
   const [localPort, setLocalPort] = useState(settings.serverPort);
@@ -92,11 +92,19 @@ export default function SettingsScreen() {
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const [showDiscovery, setShowDiscovery] = useState(false);
+  const [discoveryMode, setDiscoveryMode] = useState<"primary" | "peer">("primary");
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [discovered, setDiscovered] = useState<DiscoveredServer[]>([]);
   const [scanError, setScanError] = useState<string | null>(null);
   const scanAbortRef = useRef<AbortController | null>(null);
+
+  // Peer server addition flow
+  const [addingPeer, setAddingPeer] = useState<{
+    ip: string; port: string; hostname: string; fingerprint: string | null;
+  } | null>(null);
+  const [peerToken, setPeerToken] = useState("");
+  const [peerName, setPeerName] = useState("");
 
   const hasUnsaved =
     localIp !== settings.serverIp ||
@@ -199,6 +207,13 @@ export default function SettingsScreen() {
   };
 
   const openDiscovery = () => {
+    setDiscoveryMode("primary");
+    setShowDiscovery(true);
+    startScan();
+  };
+
+  const openPeerDiscovery = () => {
+    setDiscoveryMode("peer");
     setShowDiscovery(true);
     startScan();
   };
@@ -209,9 +224,57 @@ export default function SettingsScreen() {
   };
 
   const selectServer = (server: DiscoveredServer) => {
-    setLocalIp(server.ip);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    closeDiscovery();
+    if (discoveryMode === "peer") {
+      setAddingPeer({
+        ip: server.ip,
+        port: localPort.trim() || "7823",
+        hostname: server.hostname || server.ip,
+        fingerprint: server.id || null,
+      });
+      setPeerToken("");
+      setPeerName(server.hostname || server.ip);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      closeDiscovery();
+    } else {
+      setLocalIp(server.ip);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      closeDiscovery();
+    }
+  };
+
+  const confirmAddPeer = async () => {
+    if (!addingPeer || !peerToken.trim()) return;
+    const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const newPeer: PeerServer = {
+      id,
+      name: peerName.trim() || addingPeer.hostname,
+      ip: addingPeer.ip,
+      port: addingPeer.port,
+      token: peerToken.trim(),
+      fingerprint: addingPeer.fingerprint,
+    };
+    await savePeerServers([...settings.peerServers, newPeer]);
+    setAddingPeer(null);
+    setPeerToken("");
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const removePeer = (peerId: string) => {
+    Alert.alert(
+      "Remove peer server",
+      "Remove this server from the sync destinations?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            savePeerServers(settings.peerServers.filter((p) => p.id !== peerId));
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          },
+        },
+      ]
+    );
   };
 
   const QUALITY_LABELS: Record<string, string> = {
@@ -261,14 +324,22 @@ export default function SettingsScreen() {
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-              Available computers
+              {discoveryMode === "peer" ? "Select peer server" : "Available computers"}
             </Text>
             <TouchableOpacity onPress={closeDiscovery} hitSlop={12}>
               <Feather name="x" size={22} color={colors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
-          {/* Progress bar */}
+          {discoveryMode === "peer" && (
+            <View style={[styles.peerHintBanner, { backgroundColor: colors.accent, borderBottomColor: colors.border }]}>
+              <Feather name="info" size={13} color={colors.accentForeground} />
+              <Text style={[styles.peerHintText, { color: colors.accentForeground }]}>
+                Select the computer you want to add as a sync destination.
+              </Text>
+            </View>
+          )}
+
           {scanning && (
             <View style={styles.progressContainer}>
               <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
@@ -292,7 +363,6 @@ export default function SettingsScreen() {
             </View>
           )}
 
-          {/* Results */}
           <ScrollView style={styles.discoveryList} showsVerticalScrollIndicator={false}>
             {discovered.length === 0 && !scanning && !scanError && (
               <View style={styles.emptyState}>
@@ -316,12 +386,22 @@ export default function SettingsScreen() {
                 server.hostname && server.hostname !== server.ip
                   ? server.hostname
                   : "LAN Backup Server";
+              const isPrimary = server.ip === settings.serverIp;
+              const isPeer = settings.peerServers.some((p) => p.ip === server.ip);
+              const disabled = discoveryMode === "peer" && (isPrimary || isPeer);
               return (
                 <TouchableOpacity
                   key={server.ip}
-                  style={[styles.serverRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => selectServer(server)}
-                  activeOpacity={0.7}
+                  style={[
+                    styles.serverRow,
+                    {
+                      backgroundColor: disabled ? colors.background : colors.card,
+                      borderColor: colors.border,
+                      opacity: disabled ? 0.5 : 1,
+                    },
+                  ]}
+                  onPress={() => !disabled && selectServer(server)}
+                  activeOpacity={disabled ? 1 : 0.7}
                 >
                   <View style={[styles.serverIcon, { backgroundColor: colors.accent }]}>
                     <Feather name="monitor" size={20} color={colors.primary} />
@@ -332,9 +412,10 @@ export default function SettingsScreen() {
                     </Text>
                     <Text style={[styles.serverIp, { color: colors.mutedForeground }]}>
                       {server.ip}
+                      {isPrimary ? " · Primary" : isPeer ? " · Already added" : ""}
                     </Text>
                   </View>
-                  <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+                  {!disabled && <Feather name="chevron-right" size={18} color={colors.mutedForeground} />}
                 </TouchableOpacity>
               );
             })}
@@ -350,6 +431,72 @@ export default function SettingsScreen() {
               <Text style={[styles.rescanBtnText, { color: colors.primary }]}>Scan again</Text>
             </TouchableOpacity>
           )}
+        </View>
+      </Modal>
+
+      {/* ── Peer Token Entry Modal ── */}
+      <Modal
+        visible={!!addingPeer}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setAddingPeer(null)}
+      >
+        <View style={peerModalStyles.overlay}>
+          <View style={[peerModalStyles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[peerModalStyles.title, { color: colors.foreground }]}>Add peer server</Text>
+            <Text style={[peerModalStyles.sub, { color: colors.mutedForeground }]}>
+              {addingPeer?.hostname}  ·  {addingPeer?.ip}:{addingPeer?.port}
+            </Text>
+
+            <Text style={[styles.fieldLabel, { color: colors.foreground, marginTop: 16 }]}>Name (optional)</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.background, borderColor: colors.border, marginTop: 4 }]}>
+              <TextInput
+                value={peerName}
+                onChangeText={setPeerName}
+                placeholder="Office PC, Home NAS…"
+                placeholderTextColor={colors.mutedForeground}
+                autoCapitalize="words"
+                autoCorrect={false}
+                style={[styles.input, { color: colors.foreground }]}
+              />
+            </View>
+
+            <Text style={[styles.fieldLabel, { color: colors.foreground, marginTop: 12 }]}>Auth Token *</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.background, borderColor: colors.border, marginTop: 4 }]}>
+              <TextInput
+                value={peerToken}
+                onChangeText={setPeerToken}
+                placeholder="Peer server's secret token"
+                placeholderTextColor={colors.mutedForeground}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={[styles.input, { color: colors.foreground }]}
+              />
+            </View>
+            <Text style={[peerModalStyles.hint, { color: colors.mutedForeground }]}>
+              Find this in the peer server's terminal output or its .env file.
+            </Text>
+
+            <View style={peerModalStyles.buttons}>
+              <TouchableOpacity
+                style={[peerModalStyles.cancelBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+                onPress={() => setAddingPeer(null)}
+                activeOpacity={0.7}
+              >
+                <Text style={[peerModalStyles.cancelText, { color: colors.foreground }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[peerModalStyles.addBtn, { backgroundColor: peerToken.trim() ? colors.primary : colors.muted }]}
+                onPress={confirmAddPeer}
+                disabled={!peerToken.trim()}
+                activeOpacity={0.8}
+              >
+                <Feather name="plus" size={15} color={colors.primaryForeground} />
+                <Text style={[peerModalStyles.addText, { color: colors.primaryForeground }]}>Add Server</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
 
@@ -563,7 +710,7 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
-          RESTORE (DESKTOP → PHONE)
+          PRO FEATURES (RESTORE &amp; SERVER SYNC)
         </Text>
         <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.securityRow}>
@@ -574,17 +721,74 @@ export default function SettingsScreen() {
             />
             <View style={{ flex: 1 }}>
               <Text style={[styles.securityTitle, { color: colors.foreground }]}>
-                {settings.restoreUnlocked ? "Restore unlocked ✓" : "Restore not yet unlocked"}
+                {settings.restoreUnlocked ? "Pro features unlocked ✓" : "Pro features not yet unlocked"}
               </Text>
               <Text style={[styles.securitySub, { color: colors.mutedForeground }]}>
                 {settings.restoreUnlocked
-                  ? "You have permanent access to the Restore feature."
-                  : "A one-time €5 contribution unlocks this feature. See the Restore tab."}
+                  ? "You have permanent access to Restore and Server Sync."
+                  : "A one-time €5 contribution unlocks Restore and Server Sync. See the Restore tab."}
               </Text>
             </View>
           </View>
         </View>
       </View>
+
+      {/* ── Peer Servers — only shown when pro is unlocked ── */}
+      {settings.restoreUnlocked && (
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+            PEER SERVERS — SERVER SYNC
+          </Text>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {settings.peerServers.length === 0 ? (
+              <View style={styles.securityRow}>
+                <Feather name="server" size={16} color={colors.mutedForeground} />
+                <Text style={[styles.securitySub, { color: colors.mutedForeground, flex: 1 }]}>
+                  No peer servers yet. Add a second computer to enable Server Sync on the Backup tab.
+                </Text>
+              </View>
+            ) : (
+              settings.peerServers.map((peer, i) => (
+                <React.Fragment key={peer.id}>
+                  {i > 0 && <View style={[styles.separator, { backgroundColor: colors.border }]} />}
+                  <View style={styles.securityRow}>
+                    <Feather name="monitor" size={16} color={colors.primary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.securityTitle, { color: colors.foreground }]}>{peer.name}</Text>
+                      <Text style={[styles.securitySub, { color: colors.mutedForeground }]}>
+                        {peer.ip}:{peer.port}
+                        {peer.fingerprint ? `  ·  ID …${peer.fingerprint.slice(-6)}` : ""}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => removePeer(peer.id)} hitSlop={8}>
+                      <Text style={[styles.clearFpText, { color: colors.destructive }]}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                </React.Fragment>
+              ))
+            )}
+            <View style={[styles.separator, { backgroundColor: colors.border }]} />
+            <TouchableOpacity
+              style={styles.qualityRow}
+              onPress={openPeerDiscovery}
+              activeOpacity={0.7}
+            >
+              <Feather name="plus-circle" size={16} color={colors.primary} />
+              <Text style={[styles.securityTitle, { color: colors.primary, marginLeft: 4 }]}>
+                Add peer server…
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {settings.peerServers.length > 0 && (
+            <View style={[styles.qualityInfo, { backgroundColor: colors.accent, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginTop: 4 }]}>
+              <Feather name="info" size={13} color={colors.accentForeground} />
+              <Text style={[styles.qualityInfoText, { color: colors.accentForeground }]}>
+                When ≥1 peer server is configured, a <Text style={{ fontFamily: "Inter_600SemiBold" }}>Server Sync</Text> tab appears on the Backup screen. Files in this server's <Text style={{ fontFamily: "Inter_600SemiBold" }}>export/</Text> folder are pushed to all peers.
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <View style={styles.section}>
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
@@ -627,24 +831,23 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    marginHorizontal: 16,
   },
   field: {
-    padding: 14,
-    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 4,
   },
   fieldLabel: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
   },
   inputWrapper: {
+    borderRadius: 10,
+    borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
+    height: 44,
   },
   input: {
     flex: 1,
@@ -654,212 +857,26 @@ const styles = StyleSheet.create({
   fieldHint: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
-    lineHeight: 15,
-  },
-  testResult: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  testResultText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 18,
-  },
-  buttons: {
-    gap: 10,
-  },
-  testBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 8,
-  },
-  testBtnText: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-  },
-  saveBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    height: 48,
-    borderRadius: 14,
-    gap: 8,
-  },
-  saveBtnText: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-  },
-  securityRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    padding: 14,
-  },
-  securityTitle: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-  },
-  securitySub: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 16,
-    marginTop: 2,
-  },
-  clearFpText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-  },
-  infoBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    margin: 14,
-    padding: 12,
-    borderRadius: 10,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 18,
-  },
-  infoCode: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
   },
   scanBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    height: 42,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    gap: 8,
-    marginTop: 2,
   },
   scanBtnText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
   },
-  modalContainer: {
-    flex: 1,
-    paddingTop: 8,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
-  },
-  progressContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    gap: 6,
-  },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: 4,
-    borderRadius: 2,
-  },
-  progressLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-  },
-  scanError: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    margin: 20,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  scanErrorText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-  },
-  discoveryList: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingTop: 60,
-    paddingHorizontal: 32,
-  },
-  emptyText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  serverRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
-  serverIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  serverName: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-  },
-  serverIp: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
-  },
-  rescanBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 8,
-    margin: 16,
-  },
-  rescanBtnText: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-  },
   qualityRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   qualityRadio: {
     width: 20,
@@ -881,21 +898,265 @@ const styles = StyleSheet.create({
   qualityHint: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    marginTop: 2,
-    lineHeight: 16,
+    marginTop: 1,
   },
   qualityInfo: {
     flexDirection: "row",
-    alignItems: "flex-start",
     gap: 8,
-    margin: 14,
-    padding: 10,
-    borderRadius: 8,
+    padding: 12,
+    alignItems: "flex-start",
   },
   qualityInfoText: {
     flex: 1,
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     lineHeight: 17,
+  },
+  testResult: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  testResultText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+  },
+  buttons: {
+    gap: 10,
+  },
+  testBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  testBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  saveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  saveBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  securityRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    padding: 14,
+  },
+  securityTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+  securitySub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+    lineHeight: 17,
+  },
+  clearFpText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  infoBox: {
+    flexDirection: "row",
+    gap: 10,
+    padding: 14,
+    alignItems: "flex-start",
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 19,
+  },
+  infoCode: {
+    fontFamily: "Inter_600SemiBold",
+  },
+  // Discovery modal
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+  },
+  peerHintBanner: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    padding: 12,
+    borderBottomWidth: 1,
+  },
+  peerHintText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+  },
+  progressContainer: {
+    padding: 16,
+    gap: 6,
+  },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: 4,
+    borderRadius: 2,
+  },
+  progressLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  scanError: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    padding: 12,
+    margin: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  scanErrorText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+  },
+  discoveryList: {
+    flex: 1,
+    padding: 16,
+  },
+  emptyState: {
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  serverRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  serverIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  serverName: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+  },
+  serverIp: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  rescanBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    margin: 16,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  rescanBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+});
+
+const peerModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  card: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 20,
+  },
+  title: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    marginBottom: 4,
+  },
+  sub: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+  },
+  hint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 6,
+    lineHeight: 16,
+  },
+  buttons: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 20,
+  },
+  cancelBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  cancelText: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+  },
+  addText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
   },
 });
