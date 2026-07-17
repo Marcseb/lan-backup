@@ -141,6 +141,45 @@ The **Restore** tab lets you send files **from your computer to your phone**. Th
 
 ---
 
+## Server Sync — push files from one computer to another
+
+**Server Sync** lets the phone act as a controller to push files from one computer's `export/` folder to one or more other computers on the same network — all without going through any cloud.
+
+This feature is included with the same one-time €5 Pro unlock as Restore.
+
+### How it works
+
+```
+Phone (controller)
+   │
+   ├── triggers sync on ──▶ Primary server (reads its export/ folder)
+   │                              │
+   │                              ├──▶ Peer server A  (saves to backup/)
+   │                              └──▶ Peer server B  (saves to backup/)
+```
+
+### Setting up peer servers
+
+1. Make sure the companion server is running on **every** computer involved.
+2. Each server has its own auth token — they do **not** need to share one.
+3. In the app, open **Settings** → scroll to **Peer Servers**.
+4. Tap **Add peer server…** — the app scans your Wi-Fi and lists computers running the server.
+5. Select a computer, enter its auth token, and tap **Add Server**.
+6. Repeat for each destination computer.
+
+### Running a sync
+
+Once at least one peer server is configured and Pro is unlocked, a **Server Sync** tab appears on the Backup screen.
+
+1. Place the files you want to distribute in the **`export/`** folder of the **primary** server (same folder used by Restore).
+2. Open the Backup tab → tap **Server Sync**.
+3. Tap **Start Sync** — the primary server pushes each file to all peer servers in parallel.
+4. Progress bars update live for each destination. A ✓ or ✗ appears per server when done.
+
+> The sync runs on the server — you can leave the screen and it continues. Tap **Server Sync** again to check progress.
+
+---
+
 ## Support this project
 
 LAN Backup is free and open source. If it saves you time, a contribution is always appreciated!
@@ -229,6 +268,8 @@ Delete the `.env` file and restart the server. A new random token is generated a
 | `POST` | `/upload` | Yes | File upload — phone → computer |
 | `GET` | `/export/list` | Yes | Lists files in `export/` folder |
 | `GET` | `/export/file?name=x` | Yes | Downloads one file from `export/` to phone |
+| `POST` | `/peer-transfer` | Yes | Start a Server Sync — pushes `export/` to peer servers |
+| `GET` | `/peer-transfer/:id` | Yes | Poll progress of a running Server Sync |
 
 ---
 
