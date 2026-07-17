@@ -50,16 +50,67 @@ function loadEnvFile() {
 }
 
 // ── First-run setup ───────────────────────────────────────────────────────────
-// Called when no token is found anywhere. Generates a token, writes .env,
-// and prints clear instructions for the user.
+
+// Read one line from stdin synchronously — works on all platforms without
+// pulling in any third-party dependency.
+function promptSync(question) {
+  process.stdout.write(question);
+  const buf = Buffer.alloc(1);
+  let result = "";
+  try {
+    while (true) {
+      const n = fs.readSync(0, buf, 0, 1, null);
+      if (n === 0) break; // EOF
+      const ch = buf.toString("utf8");
+      if (ch === "\n") break;
+      if (ch !== "\r") result += ch;
+    }
+  } catch {
+    /* stdin not a tty (e.g. piped) — return whatever was collected */
+  }
+  return result.trim();
+}
+
+// Called only when no token exists anywhere (.env absent and LB_TOKEN not set).
+// Asks the user whether to generate a random token or enter their own, writes
+// .env, then prints the token. The token is NEVER printed again on later runs.
 function firstRunSetup() {
-  const token = crypto.randomBytes(16).toString("hex"); // 32 chars, 128-bit entropy
-  const defaultDir = path.join(os.homedir(), "LAN-Backup");
+  const W = 62;
+  const row = (s) => "║ " + s.padEnd(W - 2) + " ║";
+  const hr = () => "╠" + "═".repeat(W) + "╣";
+
+  console.log("\n" + "╔" + "═".repeat(W) + "╗");
+  console.log(row("  LAN Backup — First-time Setup"));
+  console.log(hr());
+  console.log(row(""));
+  console.log(row("  Choose an auth token for this server."));
+  console.log(row("  You will copy it into the app once, then it is saved."));
+  console.log(row(""));
+  console.log("╚" + "═".repeat(W) + "╝\n");
+
+  console.log("  [1]  Generate a secure random token  (recommended)");
+  console.log("  [2]  Enter my own token\n");
+
+  let token = "";
+  const choice = promptSync("  Your choice (1 or 2, default 1): ");
+
+  if (choice === "2") {
+    while (!token) {
+      token = promptSync("\n  Enter your token: ");
+      if (!token) console.log("  Token cannot be empty — please try again.");
+    }
+  } else {
+    token = crypto.randomBytes(16).toString("hex"); // 32 chars, 128-bit entropy
+    console.log("  Generating random token...");
+  }
+
   // If the setup script passed LB_BACKUP_DIR via env, persist it in .env so
   // future runs (e.g. "node server.js" directly) also use the right folder.
+  const defaultDir = path.join(os.homedir(), "LAN-Backup");
   const backupDirLine = process.env.LB_BACKUP_DIR
     ? `LB_BACKUP_DIR=${process.env.LB_BACKUP_DIR}`
     : `# LB_BACKUP_DIR=${defaultDir}`;
+
   fs.writeFileSync(
     ENV_FILE,
     [
@@ -79,21 +130,17 @@ function firstRunSetup() {
   );
   process.env.LB_TOKEN = token;
 
-  const W = 60;
-  const row = (s) => "║ " + s.padEnd(W - 2) + " ║";
   console.log("\n" + "╔" + "═".repeat(W) + "╗");
-  console.log(row("  LAN Backup — First-time Setup"));
-  console.log("╠" + "═".repeat(W) + "╣");
+  console.log(row("  Token saved!  Copy it into the app now."));
+  console.log(hr());
   console.log(row(""));
-  console.log(row("  A secure token has been generated and saved to .env"));
-  console.log(row(""));
-  console.log(row("  Copy this token into the app:"));
-  console.log(row("  App → Settings tab → Auth Token field"));
+  console.log(row("  App  →  Settings tab  →  Auth Token field"));
   console.log(row(""));
   console.log(row(`  Token:  ${token}`));
   console.log(row(""));
-  console.log(row("  The token is saved in .env and reused on every start."));
-  console.log(row("  To reset it, delete .env and restart the server."));
+  console.log(row("  ⚠  This is shown only once.  To view it later, open:"));
+  console.log(row(`     ${ENV_FILE}`));
+  console.log(row("     and look for the LB_TOKEN line."));
   console.log(row(""));
   console.log("╚" + "═".repeat(W) + "╝\n");
 }
