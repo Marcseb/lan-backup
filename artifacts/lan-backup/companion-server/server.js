@@ -768,7 +768,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log("╚═══════════════════════════════════════════╝");
   console.log(`  Listening on port : ${PORT}`);
   console.log(`  Backup directory  : ${BACKUP_ROOT}`);
-  console.log(`  Auth token        : ${AUTH_TOKEN}`);
+  console.log(`  Auth token        : ${"•".repeat(8)}  (set — edit .env to change)`);
   console.log(`  Server ID (TOFU)  : ${SERVER_ID}`);
   console.log(`  LAN IP addresses  :`);
   const nets = os.networkInterfaces();
