@@ -2,6 +2,14 @@
 
 Back up files from your phone to your computer over Wi-Fi — no cloud, no account, no cable.
 
+| Feature | What it does |
+|---|---|
+| **Backup** | Transfer files and folders from your phone to your computer |
+| **Restore** *(Pro)* | Send files from your computer back to your phone |
+| **Server Sync** *(Pro)* | Push files from one computer to one or more others over LAN |
+
+Pro features (Restore and Server Sync) require a one-time €5 contribution, unlocked via PayPal directly inside the app.
+
 ---
 
 ## Quick Start
@@ -64,22 +72,33 @@ mkdir ~\LAN_backup; cd ~\LAN_backup; Invoke-WebRequest -Uri https://raw.githubus
 
 ---
 
-When the server starts for the first time it displays an **auth token** — keep the terminal open, you will need this in the next step:
+On first launch, the server asks how you want to set your auth token:
 
 ```
-╔════════════════════════════════════════════════════════════╗
-║  LAN Backup — First-time Setup                             ║
-╠════════════════════════════════════════════════════════════╣
-║                                                            ║
-║  Copy this token into the app:                             ║
-║  App → Settings tab → Auth Token field                     ║
-║                                                            ║
-║  Token:  a1b2c3d4e5f6...                                   ║
-║                                                            ║
-╚════════════════════════════════════════════════════════════╝
+  [1]  Generate a secure random token  (recommended)
+  [2]  Enter my own token
 ```
 
-The token is saved automatically — you won't see this screen again after the first run.
+Press **Enter** (or type **1**) to generate one automatically. Type **2** to enter your own.
+
+The token is then displayed — **this is the only time it is shown**:
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  Token saved!  Copy it into the app now.                       ║
+╠════════════════════════════════════════════════════════════════╣
+║                                                                ║
+║  App  →  Settings tab  →  Auth Token field                     ║
+║                                                                ║
+║  Token:  a1b2c3d4e5f6...                                       ║
+║                                                                ║
+║  ⚠  This is shown only once.  To view it later, open:         ║
+║     .env  →  look for the LB_TOKEN line.                       ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
+Copy it — you will paste it into the app in the next step. On every restart the server loads the token silently from `.env`; you will not be prompted again.
 
 A **desktop shortcut** is also created so you can start the server with one click in the future.
 
@@ -129,15 +148,30 @@ If the shortcut is missing, re-run the original install command. It detects the 
 
 ## Restore — send files from computer to phone
 
-The **Restore** tab lets you send files **from your computer to your phone**. This feature requires a one-time €5 contribution (unlocked via PayPal inside the app).
+**Restore** lets you send files **from your computer back to your phone** over Wi-Fi. Like Server Sync, it requires the one-time €5 Pro unlock (via PayPal inside the app).
 
-1. Place files inside the **`export/`** sub-folder of your backup directory:
-   ```
-   ~/LAN-Backup/
-   ├── backup/     ← phone → computer
-   └── export/     ← computer → phone  ← put files here
-   ```
-2. Open the **Restore** tab in the app, select the files, and tap **Download to phone**.
+### Setting up
+
+Place the files you want to send inside the **`export/`** sub-folder of your backup directory:
+
+```
+~/LAN-Backup/
+├── backup/     ← phone → computer  (backed-up files land here)
+└── export/     ← computer → phone  (put files here to send to phone)
+    ├── photo.jpg
+    └── document.pdf
+```
+
+Any file type is supported — photos, documents, videos, archives.
+
+### Downloading to your phone
+
+1. Make sure the companion server is running on your computer.
+2. Open the **Restore** tab in the app.
+3. The app lists everything in `export/` — tap the files you want.
+4. Tap **Download to phone** — files are saved to your phone's local storage.
+
+> To clear the list, delete or move the files out of `export/` after downloading.
 
 ---
 
