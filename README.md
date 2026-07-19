@@ -20,26 +20,16 @@ Three steps and you're done. The whole setup takes about five minutes.
 
 ### Step 1 — Get the app on your phone
 
-LAN Backup runs inside **Expo Go**, a free app available on both platforms.
+Open **LAN Backup** directly in your phone's browser — no extra app required:
 
-| Platform | Install Expo Go |
+**[https://local-file-sync-marcsebastienb.replit.app](https://local-file-sync-marcsebastienb.replit.app)**
+
+| Platform | How to open |
 |---|---|
-| Android | [Google Play — Expo Go](https://play.google.com/store/apps/details?id=host.exp.exponent) |
-| iOS | [App Store — Expo Go](https://apps.apple.com/app/expo-go/id982107779) |
+| Android | Open Chrome (or any browser) and navigate to the link above |
+| iOS | Open Safari and navigate to the link above |
 
-Once Expo Go is installed, open LAN Backup:
-
-**On Android** — open Expo Go, tap **"Enter URL manually"** and type:
-```
-exp://6ea29a26-a374-4b67-ac7b-a6eb0c7421ee-00-5bkvdz56o8j4.expo.kirk.replit.dev
-```
-
-**On iOS** — open **Safari**, type that same address, and tap the prompt to open it in Expo Go.
-Or scan this QR code with the iPhone camera:
-
-> 📷 [Download QR code](attached_assets/expo-qr.png)
-
-The app loads in a few seconds. You can save it to your Expo Go home screen for quick access later.
+Once the page loads, tap **"Add to Home Screen"** from your browser menu to get a shortcut that feels like a native app.
 
 > **Both your phone and your computer must be on the same Wi-Fi network** for transfers to work.
 
