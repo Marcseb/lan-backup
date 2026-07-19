@@ -35,6 +35,8 @@ Once Expo Go is installed, open LAN Backup in your phone's browser:
 
 The page will automatically open the app in Expo Go, or show a QR code you can scan with your camera.
 
+> 💡 **Tip:** After opening, tap **Add to Home Screen** from your browser menu to create a shortcut for quick access next time.
+
 > **Both your phone and your computer must be on the same Wi-Fi network** for transfers to work.
 
 ---
