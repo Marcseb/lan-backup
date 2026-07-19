@@ -89,7 +89,7 @@ export async function discoverServers(
   onProgress: (scanned: number, total: number, found: DiscoveredServer[]) => void,
   signal: AbortSignal
 ): Promise<DiscoveredServer[]> {
-  const found: DiscoveredServer[] = [];
+  const byId = new Map<string, DiscoveredServer>();
   const total = 254;
   let scanned = 0;
   const BATCH = 30;
@@ -110,19 +110,24 @@ export async function discoverServers(
           const res = await fetch(`http://${ip}:${port}/ping`, { signal: ctrl.signal });
           if (res.ok) {
             const data = (await res.json()) as PingResult;
-            found.push({ ip, hostname: data.hostname ?? ip, id: data.id });
+            // Deduplicate by server id — a machine with multiple network
+            // interfaces may respond from several IPs. Keep the first hit
+            // so the lowest IP (most likely the primary interface) wins.
+            if (!byId.has(data.id)) {
+              byId.set(data.id, { ip, hostname: data.hostname ?? ip, id: data.id });
+            }
           }
         } catch {
           // timeout or unreachable — expected for most IPs
         } finally {
           clearTimeout(timer);
           scanned++;
-          onProgress(scanned, total, [...found]);
+          onProgress(scanned, total, [...byId.values()]);
         }
       })
     );
   }
-  return found;
+  return [...byId.values()];
 }
 
 function baseUrl(settings: Settings) {
