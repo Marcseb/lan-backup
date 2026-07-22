@@ -22,15 +22,36 @@ Write-Host ""
 
 # -- Check / install Node.js --------------------------------------------------
 
+function Refresh-NodePath {
+    # Re-read Machine + User PATH from the registry and apply to this session
+    $machinePath = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
+    $userPath    = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    $env:PATH    = "$machinePath;$userPath"
+
+    # winget sometimes installs to a versioned sub-folder that isn't yet in the
+    # registry PATH.  Probe the two most common locations and add them if needed.
+    $candidates = @(
+        "$env:ProgramFiles\nodejs",
+        "${env:ProgramFiles(x86)}\nodejs",
+        "$env:LOCALAPPDATA\Programs\nodejs"
+    )
+    foreach ($dir in $candidates) {
+        if ((Test-Path "$dir\node.exe") -and ($env:PATH -notlike "*$dir*")) {
+            $env:PATH = "$dir;$env:PATH"
+        }
+    }
+}
+
 function Install-NodeViaWinget {
     Write-Host "  Installing Node.js via winget..."
+    # Use --source winget explicitly to avoid the msstore certificate error
+    # (0x8a15005e) that occurs on some corporate / restricted networks.
     winget install OpenJS.NodeJS.LTS `
+        --source winget `
         --accept-source-agreements `
         --accept-package-agreements `
         --silent
-    # Refresh PATH so node is available in this session
-    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" +
-                [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    Refresh-NodePath
 }
 
 function Install-NodeViaMsi {
@@ -46,27 +67,43 @@ function Install-NodeViaMsi {
     Start-Process msiexec.exe -Wait -ArgumentList "/i `"$installer`" /quiet /norestart"
     Remove-Item $installer -Force
 
-    # Refresh PATH
-    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" +
-                [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    Refresh-NodePath
 }
 
 $nodeFound = $null -ne (Get-Command node -ErrorAction SilentlyContinue)
 
 if ($nodeFound) {
-    $nodeVer = (node --version)
+    $nodeVer = node --version
     Write-Host "  [OK] Node.js $nodeVer is already installed."
 } else {
     Write-Host "  [!] Node.js not found - installing now..."
     Write-Host ""
     $wingetFound = $null -ne (Get-Command winget -ErrorAction SilentlyContinue)
     if ($wingetFound) {
-        try { Install-NodeViaWinget } catch { Install-NodeViaMsi }
+        try {
+            Install-NodeViaWinget
+        } catch {
+            Write-Host "  [!] winget failed, falling back to direct download..."
+            Install-NodeViaMsi
+        }
     } else {
         Install-NodeViaMsi
     }
+
+    # Verify node is now reachable
+    $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+    if ($null -eq $nodeCmd) {
+        Write-Host ""
+        Write-Host "  [!] Node.js was installed but could not be found in PATH."
+        Write-Host "      Please close this window, reopen PowerShell, and run install.ps1 again."
+        Write-Host ""
+        Read-Host "  Press Enter to close"
+        exit 1
+    }
+
+    $nodeVer = node --version
     Write-Host ""
-    Write-Host "  [OK] Node.js $(node --version) installed successfully."
+    Write-Host "  [OK] Node.js $nodeVer installed successfully."
 }
 
 Write-Host ""
