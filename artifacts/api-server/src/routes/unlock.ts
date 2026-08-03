@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { unlocksTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { unlocksTable, activationCodesTable } from "@workspace/db";
+import { eq, isNull } from "drizzle-orm";
 import crypto from "node:crypto";
 import { z } from "zod/v4";
 
@@ -133,6 +133,57 @@ router.post("/unlock/ipn", async (req: Request, res: Response) => {
   }).onConflictDoNothing();
 
   req.log.info({ payerEmail, isSandbox, amount }, "IPN: unlock recorded");
+});
+
+// POST /api/unlock/redeem  — redeem a single-use activation code
+// Body: { code: string, deviceId: string }
+// - First use: marks code as used, generates + stores an unlock key, returns it.
+// - Same device re-uses (e.g. after reinstall): returns the stored key.
+// - Different device: 409.
+router.post("/unlock/redeem", async (req: Request, res: Response) => {
+  const { code, deviceId } = req.body as { code?: string; deviceId?: string };
+
+  if (!code || !deviceId) {
+    res.status(400).json({ error: "code and deviceId are required" });
+    return;
+  }
+
+  const normalized = code.trim().toUpperCase();
+
+  const rows = await db
+    .select()
+    .from(activationCodesTable)
+    .where(eq(activationCodesTable.code, normalized))
+    .limit(1);
+
+  if (rows.length === 0) {
+    res.status(404).json({ error: "Invalid activation code" });
+    return;
+  }
+
+  const row = rows[0];
+
+  // Already used by a different device
+  if (row.usedAt !== null && row.deviceId !== deviceId) {
+    res.status(409).json({ error: "This code has already been used on another device" });
+    return;
+  }
+
+  // Same device re-redemption (reinstall) — return stored key
+  if (row.usedAt !== null && row.deviceId === deviceId && row.unlockKey) {
+    res.json({ unlocked: true, unlockKey: row.unlockKey });
+    return;
+  }
+
+  // First use — generate key, mark used
+  const unlockKey = crypto.randomBytes(24).toString("hex");
+  await db
+    .update(activationCodesTable)
+    .set({ usedAt: new Date(), deviceId, unlockKey })
+    .where(eq(activationCodesTable.code, normalized));
+
+  req.log.info({ code: normalized }, "Activation code redeemed");
+  res.json({ unlocked: true, unlockKey });
 });
 
 const CheckQuerySchema = z.object({ email: z.string().email() });
