@@ -324,6 +324,7 @@ export default function RestoreScreen() {
     setDownloadResults({});
 
     const toDownload = files.filter((f) => selected.has(f.name));
+    const localResults: Record<string, "ok" | "error"> = {};
 
     for (const file of toDownload) {
       if (cancelRef.current) break;
@@ -356,17 +357,36 @@ export default function RestoreScreen() {
         await deleteAsync(cacheUri, { idempotent: true }).catch(() => {});
 
         setFileProgress((prev) => ({ ...prev, [file.name]: 1 }));
+        localResults[file.name] = "ok";
         setDownloadResults((prev) => ({ ...prev, [file.name]: "ok" }));
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } catch (e) {
         setFileProgress((prev) => ({ ...prev, [file.name]: null }));
+        localResults[file.name] = "error";
         setDownloadResults((prev) => ({ ...prev, [file.name]: "error" }));
+
+        // Token mismatch — surface immediately and stop the batch
+        const msg = String(e);
+        if (msg.includes("401") || msg.includes("Unauthorized")) {
+          setDownloading(false);
+          Alert.alert(
+            "Authentication failed",
+            "The server rejected your auth token. Check your token in Settings.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
       }
     }
 
     setDownloading(false);
     setSelected(new Set());
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const anySucceeded = Object.values(localResults).some((r) => r === "ok");
+    Haptics.notificationAsync(
+      anySucceeded
+        ? Haptics.NotificationFeedbackType.Success
+        : Haptics.NotificationFeedbackType.Error
+    );
   };
 
   // ── Not unlocked → show paywall ──
