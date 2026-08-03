@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   Alert,
   Keyboard,
+  Modal,
   Platform,
   RefreshControl,
   ScrollView,
@@ -24,6 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "@/context/SettingsContext";
@@ -102,6 +104,16 @@ function FileItem({ file, selected, downloading, progress, onToggle }: FileItemP
   );
 }
 
+// ── Device ID helper ──────────────────────────────────────────────────────────
+async function getOrCreateDeviceId(): Promise<string> {
+  const KEY = "lb_device_id";
+  const stored = await SecureStore.getItemAsync(KEY);
+  if (stored) return stored;
+  const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+  await SecureStore.setItemAsync(KEY, id);
+  return id;
+}
+
 // ── Paywall screen ────────────────────────────────────────────────────────────
 function PaywallScreen() {
   const colors = useColors();
@@ -109,6 +121,45 @@ function PaywallScreen() {
   const [email, setEmail] = useState("");
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Activation-code sheet
+  const [showCodeSheet, setShowCodeSheet] = useState(false);
+  const [activationCode, setActivationCode] = useState("");
+  const [activating, setActivating] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+
+  const activateCode = async () => {
+    const trimmed = activationCode.trim().toUpperCase();
+    if (!trimmed) { setCodeError("Please enter your activation code"); return; }
+    setActivating(true);
+    setCodeError(null);
+    Keyboard.dismiss();
+    try {
+      const deviceId = await getOrCreateDeviceId();
+      const res = await fetch(`${UNLOCK_API}/unlock/redeem`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: trimmed, deviceId }),
+      });
+      const data = (await res.json()) as { unlocked?: boolean; unlockKey?: string; error?: string };
+      if (!res.ok) {
+        setCodeError(data.error ?? `Error ${res.status} — try again`);
+        return;
+      }
+      if (!data.unlocked || !data.unlockKey) {
+        setCodeError("Unexpected response — contact the app owner");
+        return;
+      }
+      await updateSetting("restoreUnlocked", true);
+      await updateSetting("restoreUnlockKey", data.unlockKey);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowCodeSheet(false);
+    } catch (e) {
+      setCodeError(`Connection error: ${String(e).replace(/^Error:\s*/, "")}`);
+    } finally {
+      setActivating(false);
+    }
+  };
 
   const openPayPal = () => {
     openURL(PAYPAL_DONATE_URL);
@@ -233,8 +284,93 @@ function PaywallScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* ── Activation code ── */}
+        <View style={styles.paywallCodeDividerRow}>
+          <View style={[styles.paywallCodeDivider, { backgroundColor: colors.border }]} />
+          <Text style={[styles.paywallCodeDividerText, { color: colors.mutedForeground }]}>or</Text>
+          <View style={[styles.paywallCodeDivider, { backgroundColor: colors.border }]} />
+        </View>
+        <TouchableOpacity
+          style={[styles.paywallCodeBtn, { borderColor: colors.border }]}
+          onPress={() => { setShowCodeSheet(true); setCodeError(null); setActivationCode(""); }}
+          activeOpacity={0.7}
+        >
+          <Feather name="key" size={15} color={colors.mutedForeground} />
+          <Text style={[styles.paywallCodeBtnText, { color: colors.foreground }]}>
+            I have an activation code
+          </Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
+
+    {/* ── Activation code sheet ── */}
+    <Modal
+      visible={showCodeSheet}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowCodeSheet(false)}
+    >
+      <TouchableOpacity
+        style={styles.codeSheetOverlay}
+        activeOpacity={1}
+        onPress={() => { Keyboard.dismiss(); setShowCodeSheet(false); }}
+      />
+      <View style={[styles.codeSheet, { backgroundColor: colors.card }]}>
+        <View style={[styles.codeSheetHandle, { backgroundColor: colors.border }]} />
+
+        <Text style={[styles.codeSheetTitle, { color: colors.foreground }]}>
+          Enter activation code
+        </Text>
+        <Text style={[styles.codeSheetSubtitle, { color: colors.mutedForeground }]}>
+          Enter the code provided by the app owner to unlock all Pro features.
+        </Text>
+
+        <View style={[styles.codeInput, { borderColor: colors.border, backgroundColor: colors.background }]}>
+          <TextInput
+            value={activationCode}
+            onChangeText={(t) => setActivationCode(t.toUpperCase())}
+            placeholder="LB-A3F2C81B"
+            placeholderTextColor={colors.mutedForeground}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            autoFocus
+            style={[styles.codeInputText, { color: colors.foreground }]}
+          />
+        </View>
+
+        {codeError && (
+          <View style={[styles.paywallError, { backgroundColor: "#fee2e2", borderColor: "#fca5a5" }]}>
+            <Feather name="alert-circle" size={14} color="#dc2626" />
+            <Text style={[styles.paywallErrorText, { color: "#dc2626" }]}>{codeError}</Text>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[styles.paywallCheckBtn, { backgroundColor: colors.primary, opacity: activating ? 0.7 : 1 }]}
+          onPress={activateCode}
+          disabled={activating}
+          activeOpacity={0.8}
+        >
+          {activating ? (
+            <ActivityIndicator size="small" color={colors.primaryForeground} />
+          ) : (
+            <Feather name="unlock" size={16} color={colors.primaryForeground} />
+          )}
+          <Text style={[styles.paywallCheckBtnText, { color: colors.primaryForeground }]}>
+            {activating ? "Activating…" : "Activate"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.codeSheetCancel}
+          onPress={() => setShowCodeSheet(false)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.codeSheetCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
   );
 }
 
@@ -724,4 +860,37 @@ const styles = StyleSheet.create({
   },
   paywallCheckBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   paywallAlreadyPaid: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 4 },
+  // Activation code entry
+  paywallCodeDividerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 4 },
+  paywallCodeDivider: { flex: 1, height: 1 },
+  paywallCodeDividerText: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  paywallCodeBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, paddingVertical: 13, borderRadius: 12, borderWidth: 1,
+  },
+  paywallCodeBtnText: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  // Activation code modal sheet
+  codeSheetOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  codeSheet: {
+    paddingHorizontal: 20, paddingBottom: 36, paddingTop: 12,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    gap: 12,
+    shadowColor: "#000", shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.12, shadowRadius: 12, elevation: 20,
+  },
+  codeSheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4 },
+  codeSheetTitle: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  codeSheetSubtitle: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19, marginTop: -4 },
+  codeInput: {
+    borderWidth: 1.5, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12,
+  },
+  codeInputText: {
+    fontSize: 22, fontFamily: "Inter_700Bold",
+    letterSpacing: 2, textAlign: "center",
+  },
+  codeSheetCancel: { alignItems: "center", paddingVertical: 6 },
+  codeSheetCancelText: { fontSize: 14, fontFamily: "Inter_500Medium" },
 });
