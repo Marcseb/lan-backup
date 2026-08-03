@@ -146,9 +146,10 @@ export default function SettingsScreen() {
         return;
       }
       const disk = await getDiskInfo(tempSettings);
+      const versionSuffix = ping.version ? ` · Server v${ping.version}` : "";
       setTestResult({
         ok: true,
-        message: `Connected — ${(disk.free / 1e9).toFixed(1)} GB free (${disk.usagePercent.toFixed(0)}% used)`,
+        message: `Connected — ${(disk.free / 1e9).toFixed(1)} GB free (${disk.usagePercent.toFixed(0)}% used)${versionSuffix}`,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
