@@ -144,24 +144,25 @@ function authHeaders(settings: Settings): Record<string, string> {
 export async function pingServer(
   settings: Settings,
   knownFingerprint: string | null
-): Promise<{ ok: boolean; fingerprintMismatch: boolean; id: string | null; error?: string }> {
+): Promise<{ ok: boolean; fingerprintMismatch: boolean; id: string | null; version: string | null; error?: string }> {
   try {
     const res = await fetch(`${baseUrl(settings)}/ping`, {
       method: "GET",
       headers: { "X-Client": "LAN-Backup/1.0" },
     });
     if (!res.ok) {
-      return { ok: false, fingerprintMismatch: false, id: null, error: `Server returned ${res.status}` };
+      return { ok: false, fingerprintMismatch: false, id: null, version: null, error: `Server returned ${res.status}` };
     }
     const data = (await res.json()) as PingResult;
     const serverId = data.id ?? null;
+    const version = data.version ?? null;
 
     if (knownFingerprint && serverId && serverId !== knownFingerprint) {
-      return { ok: false, fingerprintMismatch: true, id: serverId, error: "Server fingerprint mismatch — possible impersonation" };
+      return { ok: false, fingerprintMismatch: true, id: serverId, version, error: "Server fingerprint mismatch — possible impersonation" };
     }
-    return { ok: true, fingerprintMismatch: false, id: serverId };
+    return { ok: true, fingerprintMismatch: false, id: serverId, version };
   } catch (e) {
-    return { ok: false, fingerprintMismatch: false, id: null, error: String(e) };
+    return { ok: false, fingerprintMismatch: false, id: null, version: null, error: String(e) };
   }
 }
 
@@ -272,8 +273,30 @@ export async function pollPeerSync(
   const res = await fetch(`${baseUrl(settings)}/peer-transfer/${encodeURIComponent(transferId)}`, {
     headers: authHeaders(settings),
   });
+  if (res.status === 401) throw new Error("Unauthorized — check your auth token");
   if (!res.ok) throw new Error(`Poll failed: ${res.status}`);
   return (await res.json()) as PeerTransferStatus;
+}
+
+/**
+ * Unauthenticated ping to any companion server URL.
+ * Returns { ok, version } — never throws.
+ */
+export async function pingByUrl(
+  url: string,
+  timeoutMs = 3000
+): Promise<{ ok: boolean; version: string | null }> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(`${url}/ping`, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) return { ok: false, version: null };
+    const data = (await res.json()) as { version?: string };
+    return { ok: true, version: data.version ?? null };
+  } catch {
+    return { ok: false, version: null };
+  }
 }
 
 export interface UploadResult {
