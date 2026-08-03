@@ -118,6 +118,8 @@ async function getOrCreateDeviceId(): Promise<string> {
 function PaywallScreen() {
   const colors = useColors();
   const { settings, updateSetting } = useSettings();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? (49 + insets.bottom);
   const [email, setEmail] = useState("");
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -203,7 +205,7 @@ function PaywallScreen() {
     <>
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={styles.paywallContent}
+      contentContainerStyle={[styles.paywallContent, { paddingBottom: tabBarHeight + 24 }]}
       keyboardShouldPersistTaps="handled"
     >
       <View style={[styles.paywallCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
