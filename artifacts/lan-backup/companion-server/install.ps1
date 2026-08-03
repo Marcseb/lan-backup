@@ -106,6 +106,25 @@ if ($nodeFound) {
     Write-Host "  [OK] Node.js $nodeVer installed successfully."
 }
 
+# -- Create / refresh desktop shortcut ----------------------------------------
+# The shortcut calls cmd.exe which resolves `node` from PATH at launch time,
+# so it keeps working after Node.js is updated or reinstalled.
+Write-Host "  Creating desktop shortcut..."
+try {
+    $WshShell  = New-Object -ComObject WScript.Shell
+    $LnkPath   = "$env:USERPROFILE\Desktop\Start LAN Backup Server.lnk"
+    $Shortcut  = $WshShell.CreateShortcut($LnkPath)
+    $Shortcut.TargetPath       = "%SystemRoot%\system32\cmd.exe"
+    $Shortcut.Arguments        = "/k `"cd /d `"$ScriptDir`" && node server.js`""
+    $Shortcut.WorkingDirectory = $ScriptDir
+    $Shortcut.Description      = "Start LAN Backup companion server"
+    $Shortcut.Save()
+    Write-Host "  [OK] Shortcut created on Desktop."
+} catch {
+    Write-Host "  [!] Could not create shortcut: $_"
+    Write-Host "      Run install.ps1 again to start the server manually."
+}
+
 Write-Host ""
 Write-Host "-------------------------------------------------"
 Write-Host "  Starting LAN Backup server..."
