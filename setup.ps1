@@ -69,10 +69,32 @@ Write-Host ""
 # Pass the backup folder to the server so it is written to .env on first run.
 $env:LB_BACKUP_DIR = $DestDir
 
-# -- Already installed? -------------------------------------------------------
+# -- Already installed? Re-download to get the latest version. ----------------
 if (Test-Path (Join-Path $ServerDir "server.js")) {
-    Write-Host "  Companion server already installed."
-    Write-Host "  Starting it now..."
+    Write-Host "  Existing installation found -- downloading latest version..."
+    Write-Host ""
+
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    } catch { }
+
+    try {
+        Invoke-WebRequest -Uri $ReleaseUrl -OutFile $ZipPath -UseBasicParsing -ErrorAction Stop
+    } catch {
+        Bail "Download failed: $_  Check your internet connection and try again."
+    }
+
+    # Extract over the existing folder; .env is not in the archive so it survives.
+    Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+    Remove-Item $ZipPath -Force
+    Write-Host "  Updated to latest version."
+    Write-Host ""
+
+    if (Test-Path (Join-Path $ServerDir ".env")) {
+        Write-Host "  OK  Auth token preserved from companion-server\.env"
+    } else {
+        Write-Host "  i   No .env found -- the server will ask you to set an auth token now."
+    }
     Write-Host ""
     Create-Shortcut
     Get-ChildItem $ServerDir -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
