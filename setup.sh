@@ -80,18 +80,29 @@ ENDDESKTOP
 
 # -- Check for already-installed companion server -----------------------------
 if [[ -f "$DEST_DIR/companion-server/server.js" ]]; then
-  echo "  Companion server already installed."
+  echo "  Existing installation found — downloading latest version..."
   echo ""
+
+  if command -v curl &>/dev/null; then
+    curl -fsSL "$RELEASE_URL" -o "$DEST_DIR/companion-server.tar.gz"
+  elif command -v wget &>/dev/null; then
+    wget -q "$RELEASE_URL" -O "$DEST_DIR/companion-server.tar.gz"
+  else
+    echo "  ERROR: Neither curl nor wget found. Please install one and try again."
+    exit 1
+  fi
+
+  # Extract over the existing folder; .env is not in the archive so it survives.
+  tar -xzf "$DEST_DIR/companion-server.tar.gz" -C "$DEST_DIR"
+  rm -f "$DEST_DIR/companion-server.tar.gz"
+  echo "  Updated to latest version."
+  echo ""
+
   if [[ -f "$DEST_DIR/companion-server/.env" ]]; then
-    echo "  ✅  Auth token found in companion-server/.env — the server will use it."
-    echo "      To choose a new token, delete that file and run this command again:"
-    echo "      rm companion-server/.env"
-    echo ""
+    echo "  ✅  Auth token preserved from companion-server/.env"
   else
     echo "  ℹ️   No .env found — the server will ask you to set an auth token now."
-    echo ""
   fi
-  echo "  Starting server..."
   echo ""
   create_shortcut
   export LB_BACKUP_DIR="$SETUP_DIR"
