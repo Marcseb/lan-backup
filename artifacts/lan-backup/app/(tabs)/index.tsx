@@ -931,6 +931,16 @@ export default function BackupScreen() {
 
             <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
               <View style={helpStyles.sectionTitleRow}>
+                <Feather name="upload" size={18} color={colors.primary} />
+                <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Backing up files</Text>
+              </View>
+              <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
+                Open the <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>Backup</Text> tab, tap <Text style={helpStyles.code}>+</Text> to pick files or folders, then tap <Text style={helpStyles.code}>Start Backup</Text>. A progress bar shows each file being transferred. To cancel mid-transfer, tap <Text style={helpStyles.code}>Cancel</Text>.
+              </Text>
+            </View>
+
+            <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <View style={helpStyles.sectionTitleRow}>
                 <Feather name="minimize-2" size={18} color={colors.primary} />
                 <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Image compression</Text>
               </View>
@@ -944,6 +954,28 @@ export default function BackupScreen() {
               <Text style={[helpStyles.step, { color: colors.foreground }]}><Text style={helpStyles.code}>High</Text> — 85% quality, max 2560 px. Near-original quality with modest size reduction.</Text>
               <Text style={[helpStyles.tip, { color: colors.mutedForeground, borderLeftColor: colors.primary }]}>
                 💡 Only image files (JPG, PNG, HEIC, WebP) are compressed. Videos, PDFs, and other files are always sent as-is.
+              </Text>
+            </View>
+
+            <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <View style={helpStyles.sectionTitleRow}>
+                <Feather name="corner-left-down" size={18} color={colors.primary} />
+                <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Restore — computer → phone (Pro)</Text>
+              </View>
+              <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
+                Restore lets you send files from your computer back to your phone over Wi-Fi. Like Server Sync, it requires the one-time <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>€5 Pro unlock</Text> (via PayPal inside the app).
+              </Text>
+              <Text style={[helpStyles.sectionTitle, { color: colors.foreground, fontSize: 13, marginTop: 8 }]}>Setting up</Text>
+              <Text style={[helpStyles.step, { color: colors.foreground }]}>
+                Place the files you want to send inside the <Text style={helpStyles.code}>export/</Text> sub-folder of your backup directory:
+              </Text>
+              <View style={[helpStyles.codeBlock, { backgroundColor: colors.muted, borderColor: colors.border, marginTop: 4 }]}>
+                <Text style={[helpStyles.codeText, { color: colors.foreground }]}>
+                  {"~/LAN-Backup/\n├── backup/   ← phone → computer\n└── export/   ← computer → phone\n    ├── photo.jpg\n    └── document.pdf"}
+                </Text>
+              </View>
+              <Text style={[helpStyles.tip, { color: colors.mutedForeground, borderLeftColor: colors.primary }]}>
+                💡 Any file type is supported — photos, documents, videos, archives.
               </Text>
             </View>
 
@@ -974,14 +1006,37 @@ export default function BackupScreen() {
               </Text>
               <TouchableOpacity
                 style={[helpStyles.linkBtn, { backgroundColor: colors.primary }]}
-                onPress={() => Linking.openURL("https://github.com/Marcseb/lan-backup")}
+                onPress={() => Linking.openURL("https://github.com/Marcseb/lan-backup/releases/latest")}
                 activeOpacity={0.8}
               >
                 <Feather name="github" size={16} color={colors.primaryForeground} />
                 <Text style={[helpStyles.linkBtnText, { color: colors.primaryForeground }]}>
-                  github.com/Marcseb/lan-backup
+                  Download latest release
                 </Text>
               </TouchableOpacity>
+            </View>
+
+            <View style={[helpStyles.section, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <View style={helpStyles.sectionTitleRow}>
+                <Feather name="share-2" size={18} color={colors.primary} />
+                <Text style={[helpStyles.sectionTitle, { color: colors.foreground }]}>Share this app</Text>
+              </View>
+              <Text style={[helpStyles.body2, { color: colors.mutedForeground }]}>
+                To use LAN Backup, <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.foreground }}>Expo Go</Text> must be installed first (free on App Store and Google Play). Then open this link in the phone's browser — it will launch the app in Expo Go automatically:
+              </Text>
+              <TouchableOpacity
+                style={[helpStyles.linkBtn, { backgroundColor: colors.primary }]}
+                onPress={() => Linking.openURL("https://local-file-sync-marcsebastienb.replit.app")}
+                activeOpacity={0.8}
+              >
+                <Feather name="external-link" size={16} color={colors.primaryForeground} />
+                <Text style={[helpStyles.linkBtnText, { color: colors.primaryForeground }]}>
+                  local-file-sync-marcsebastienb.replit.app
+                </Text>
+              </TouchableOpacity>
+              <Text style={[helpStyles.tip, { color: colors.mutedForeground, borderLeftColor: colors.primary }]}>
+                💡 The page shows a QR code and store links if Expo Go isn't detected automatically. After opening, tap <Text style={{ fontFamily: "Inter_600SemiBold" }}>Add to Home Screen</Text> in the browser menu for a quick-access shortcut next time.
+              </Text>
             </View>
 
             <View style={[helpStyles.section, { backgroundColor: "#fff7ed", borderColor: "#fed7aa" }]}>
