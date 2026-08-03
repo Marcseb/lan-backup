@@ -557,7 +557,7 @@ const server = http.createServer((req, res) => {
     const hostname = /^\d+\.\d+\.\d+\.\d+$/.test(rawHostname)
       ? rawHostname
       : rawHostname.replace(/\.local$/, "");
-    return json(res, 200, { id: SERVER_ID, version: "1.0.0", hostname, backupDir: BACKUP_ROOT });
+    return json(res, 200, { id: SERVER_ID, version: "1.1.0", hostname, backupDir: BACKUP_ROOT });
   }
 
   // GET /disk — disk info (auth required)
