@@ -30,6 +30,7 @@ import {
   compressImageIfNeeded,
   getDiskInfo,
   pingServer,
+  pingByUrl,
   uploadFile,
   startPeerSync,
   pollPeerSync,
@@ -39,6 +40,24 @@ interface FileProgress {
   progress: number | null;
   done: boolean;
   error: string | null;
+}
+
+/** Minimum server version required for Server Sync (peer-transfer endpoints). */
+const SERVER_SYNC_MIN_VERSION = "1.0.0";
+const GITHUB_RELEASES_URL = "https://github.com/Marcseb/lan-backup/releases";
+
+/**
+ * Returns true if `version` is >= `minimum` (semver, three numeric parts).
+ * Treats a missing/unparseable version as less than anything.
+ */
+function semverGte(version: string | null, minimum: string): boolean {
+  if (!version) return false;
+  const parse = (v: string) => v.split(".").map((n) => parseInt(n, 10) || 0);
+  const [ma, mi, pa] = parse(version);
+  const [minMa, minMi, minPa] = parse(minimum);
+  if (ma !== minMa) return ma > minMa;
+  if (mi !== minMi) return mi > minMi;
+  return pa >= minPa;
 }
 
 export default function BackupScreen() {
@@ -61,6 +80,7 @@ export default function BackupScreen() {
   const [diskInfo, setDiskInfo] = useState<DiskInfo | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [fingerprintMismatch, setFingerprintMismatch] = useState(false);
+  const [serverTooOld, setServerTooOld] = useState(false);
   const [fileProgress, setFileProgress] = useState<Record<string, FileProgress>>({});
   const [isScanning, setIsScanning] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -73,6 +93,7 @@ export default function BackupScreen() {
   const [syncTransferId, setSyncTransferId] = useState<string | null>(null);
   const [syncProgress, setSyncProgress] = useState<PeerTransferStatus | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [peerVersionWarning, setPeerVersionWarning] = useState<string | null>(null);
   const syncPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const navigation = useNavigation();
@@ -95,6 +116,7 @@ export default function BackupScreen() {
     setChecking(true);
     setServerError(null);
     setFingerprintMismatch(false);
+    setServerTooOld(false);
 
     try {
       const ping = await pingServer(settings, settings.serverFingerprint);
@@ -114,6 +136,11 @@ export default function BackupScreen() {
 
       if (ping.id && !settings.serverFingerprint) {
         await updateSetting("serverFingerprint", ping.id);
+      }
+
+      // Check whether this server version supports Server Sync
+      if (!semverGte(ping.version, SERVER_SYNC_MIN_VERSION)) {
+        setServerTooOld(true);
       }
 
       const disk = await getDiskInfo(settings);
@@ -437,8 +464,18 @@ export default function BackupScreen() {
               : Haptics.NotificationFeedbackType.Error
           );
         }
-      } catch {
-        // network hiccup — keep polling
+      } catch (e) {
+        // Auth failure — stop polling immediately and surface the error
+        if (String(e).includes("Unauthorized")) {
+          if (syncPollRef.current !== null) {
+            clearInterval(syncPollRef.current);
+            syncPollRef.current = null;
+          }
+          setSyncStatus("error");
+          setSyncError("Auth token rejected by server. Check your token in Settings.");
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
+        // Other errors = transient network hiccup — keep polling
       }
     }, 1500);
     return () => {
@@ -454,6 +491,7 @@ export default function BackupScreen() {
     setSyncError(null);
     setSyncProgress(null);
     setSyncTransferId(null);
+    setPeerVersionWarning(null);
     setSyncStatus("running");
     try {
       const destinations = settings.peerServers.map((p) => ({
@@ -461,6 +499,27 @@ export default function BackupScreen() {
         token: p.token,
         fingerprint: p.fingerprint,
       }));
+
+      // Check each destination's version before starting — if reachable but
+      // outdated, abort early with a clear message instead of a cryptic failure.
+      const peerChecks = await Promise.all(
+        destinations.map(async (d) => {
+          const ping = await pingByUrl(d.url);
+          const versionOk = !ping.ok || semverGte(ping.version, SERVER_SYNC_MIN_VERSION);
+          return { url: d.url, reachable: ping.ok, versionOk };
+        })
+      );
+      const tooOld = peerChecks.filter((p) => p.reachable && !p.versionOk);
+      if (tooOld.length > 0) {
+        setSyncStatus("idle");
+        setPeerVersionWarning(
+          `${tooOld.length} destination server${tooOld.length > 1 ? "s are" : " is"} outdated. ` +
+          `Update ${tooOld.length > 1 ? "them" : "it"} to v${SERVER_SYNC_MIN_VERSION} or newer before syncing.`
+        );
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        return;
+      }
+
       const result = await startPeerSync(settings, destinations);
       setSyncTransferId(result.transferId);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -611,6 +670,46 @@ export default function BackupScreen() {
         {/* ── Sync mode content ── */}
         {tabMode === "sync" && (
           <View style={{ gap: 12 }}>
+            {/* Outdated peer destination warning (Task #18) */}
+            {peerVersionWarning && (
+              <View style={[syncStyles.outdatedBox, { backgroundColor: "#fff7ed", borderColor: "#fed7aa" }]}>
+                <Feather name="alert-triangle" size={15} color="#c2410c" style={{ marginTop: 1, flexShrink: 0 }} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Text style={[syncStyles.outdatedText, { color: "#c2410c" }]}>
+                    {peerVersionWarning}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(GITHUB_RELEASES_URL)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[syncStyles.outdatedLink, { color: "#9a3412" }]}>
+                      Download latest release →
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Outdated source server warning */}
+            {serverTooOld && (
+              <View style={[syncStyles.outdatedBox, { backgroundColor: "#fff7ed", borderColor: "#fed7aa" }]}>
+                <Feather name="alert-triangle" size={15} color="#c2410c" style={{ marginTop: 1, flexShrink: 0 }} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Text style={[syncStyles.outdatedText, { color: "#c2410c" }]}>
+                    Your companion server is outdated — download the latest version to use Server Sync.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(GITHUB_RELEASES_URL)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[syncStyles.outdatedLink, { color: "#9a3412" }]}>
+                      Download latest release →
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
             {/* Source */}
             <View style={{ gap: 6 }}>
               <Text style={[syncStyles.sectionLabel, { color: colors.mutedForeground }]}>SOURCE</Text>
@@ -1276,6 +1375,24 @@ const syncStyles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     lineHeight: 17,
+  },
+  outdatedBox: {
+    flexDirection: "row",
+    gap: 10,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "flex-start",
+  },
+  outdatedText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 18,
+  },
+  outdatedLink: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    textDecorationLine: "underline",
   },
   runningRow: {
     flexDirection: "row",
