@@ -1,12 +1,11 @@
 # SHA-256 checksums for companion-server release archives
-# Release: v1.0.0 — Initial release + Server Sync
-# GitHub release ID: 344737131
-# Published: 2026-07-17
-# Download: https://github.com/Marcseb/lan-backup/releases/tag/v1.0.0
+# Release: v1.1.0 — Server Sync + Windows installer fixes
+# GitHub release ID: 364144422
+# Download: https://github.com/Marcseb/lan-backup/releases/latest
 #
 # Verify on Linux/macOS:  sha256sum -c CHECKSUMS.txt
 # Verify on Windows (PowerShell):
 #   Get-FileHash companion-server.zip -Algorithm SHA256
 
-aed0a0e1f9a390752f39a754d2054f316e99c41213c5f6c2ab5d870c7ef3b549  companion-server.tar.gz
-d2432b3d48b6a9ab697482c5bdd8ebdd7b815a6c5ccffbf06348540427d63329  companion-server.zip
+e9b07e6c54699015fb9e8aa60a8079fadbbeba286137f6f3cad0dd1cad10c714  companion-server.tar.gz
+4077764b9f8eb90aa24a9b40016c622ea8c54d9a884a2ccdfd2abf52f8b4fa11  companion-server.zip
