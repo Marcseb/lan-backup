@@ -200,6 +200,7 @@ function PaywallScreen() {
   };
 
   return (
+    <>
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={styles.paywallContent}
@@ -371,6 +372,7 @@ function PaywallScreen() {
         </TouchableOpacity>
       </View>
     </Modal>
+    </>
   );
 }
 
