@@ -20,7 +20,7 @@
 set -euo pipefail
 
 REPO="Marcseb/lan-backup"
-RELEASE_ID="${1:-344737131}"
+RELEASE_ID="${1:-364144422}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ -z "${GITHUB_PAT:-}" ]]; then
