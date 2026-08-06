@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import {
   cacheDirectory,
+  documentDirectory,
   readAsStringAsync,
   writeAsStringAsync,
   deleteAsync,
@@ -438,7 +439,16 @@ export default function RestoreScreen() {
     });
   };
 
+  // On iOS, SAF doesn't exist — files go straight to the app's documentDirectory
+  // (visible in Files app → On My iPhone → LAN Backup).
+  const IOS_DEST = "ios-documents";
+
   const pickRestoreFolder = async () => {
+    if (Platform.OS === "ios") {
+      await updateSetting("restoreFolder", IOS_DEST);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      return;
+    }
     try {
       const perm = await StorageAccessFramework.requestDirectoryPermissionsAsync();
       if (!perm.granted) return;
@@ -448,6 +458,14 @@ export default function RestoreScreen() {
       Alert.alert("Folder picker", "Could not open folder picker. Please try again.");
     }
   };
+
+  // Auto-select iOS destination on first load so the user doesn't have to tap Choose.
+  useEffect(() => {
+    if (Platform.OS === "ios" && !settings.restoreFolder) {
+      updateSetting("restoreFolder", IOS_DEST);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const startDownload = async () => {
     if (selected.size === 0) {
@@ -472,29 +490,39 @@ export default function RestoreScreen() {
       setFileProgress((prev) => ({ ...prev, [file.name]: null }));
 
       try {
-        const destUri = await StorageAccessFramework.createFileAsync(
-          settings.restoreFolder,
-          file.name,
-          "application/octet-stream"
-        );
+        if (Platform.OS === "ios") {
+          // iOS: SAF is unavailable — download directly to documentDirectory
+          // (visible in Files app → On My iPhone → LAN Backup)
+          const finalUri = `${documentDirectory}${file.name}`;
+          await downloadExportFile(settings, file.name, finalUri, (recv, total) => {
+            if (total > 0) {
+              setFileProgress((prev) => ({ ...prev, [file.name]: recv / total }));
+            }
+          });
+        } else {
+          // Android: SAF flow — pick a content:// URI, copy via base64
+          const destUri = await StorageAccessFramework.createFileAsync(
+            settings.restoreFolder!,
+            file.name,
+            "application/octet-stream"
+          );
 
-        // SAF gives us a content:// URI — download to cache then copy
-        const cacheUri = `${cacheDirectory}lb_restore_${Date.now()}_${file.name}`;
+          const cacheUri = `${cacheDirectory}lb_restore_${Date.now()}_${file.name}`;
 
-        await downloadExportFile(settings, file.name, cacheUri, (recv, total) => {
-          if (total > 0) {
-            setFileProgress((prev) => ({ ...prev, [file.name]: recv / total }));
-          }
-        });
+          await downloadExportFile(settings, file.name, cacheUri, (recv, total) => {
+            if (total > 0) {
+              setFileProgress((prev) => ({ ...prev, [file.name]: recv / total }));
+            }
+          });
 
-        // Read the downloaded bytes and write via SAF
-        const base64 = await readAsStringAsync(cacheUri, {
-          encoding: EncodingType.Base64,
-        });
-        await writeAsStringAsync(destUri, base64, {
-          encoding: EncodingType.Base64,
-        });
-        await deleteAsync(cacheUri, { idempotent: true }).catch(() => {});
+          const base64 = await readAsStringAsync(cacheUri, {
+            encoding: EncodingType.Base64,
+          });
+          await writeAsStringAsync(destUri, base64, {
+            encoding: EncodingType.Base64,
+          });
+          await deleteAsync(cacheUri, { idempotent: true }).catch(() => {});
+        }
 
         setFileProgress((prev) => ({ ...prev, [file.name]: 1 }));
         localResults[file.name] = "ok";
@@ -548,7 +576,9 @@ export default function RestoreScreen() {
   }
 
   const folderLabel = settings.restoreFolder
-    ? settings.restoreFolder.split("%3A").pop()?.split("%2F").pop() ?? "Selected folder"
+    ? settings.restoreFolder === "ios-documents"
+      ? "Files app (On My iPhone)"
+      : settings.restoreFolder.split("%3A").pop()?.split("%2F").pop() ?? "Selected folder"
     : null;
 
   return (
@@ -583,15 +613,17 @@ export default function RestoreScreen() {
                   </Text>
                 )}
               </View>
-              <TouchableOpacity
-                onPress={pickRestoreFolder}
-                style={[styles.folderBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.folderBtnText, { color: colors.primary }]}>
-                  {folderLabel ? "Change" : "Choose"}
-                </Text>
-              </TouchableOpacity>
+              {Platform.OS !== "ios" && (
+                <TouchableOpacity
+                  onPress={pickRestoreFolder}
+                  style={[styles.folderBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.folderBtnText, { color: colors.primary }]}>
+                    {folderLabel ? "Change" : "Choose"}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
