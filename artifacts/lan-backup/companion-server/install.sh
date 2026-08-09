@@ -62,19 +62,47 @@ need_sudo() {
 
 install_node_macos() {
   if command -v brew &>/dev/null; then
-    echo "  Installing Node.js via Homebrew..."
+    # Homebrew is already installed — node is one small formula, no extra tools needed.
+    echo "  Installing Node.js via Homebrew (~50 MB)..."
     brew install node
   else
-    echo "  Homebrew not found — installing it first (takes a few minutes)..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    if [[ -f /opt/homebrew/bin/brew ]]; then
-      eval "$(/opt/homebrew/bin/brew shellenv)"
-    elif [[ -f /usr/local/bin/brew ]]; then
-      eval "$(/usr/local/bin/brew shellenv)"
-    fi
+    # Homebrew is NOT installed.  Installing it from scratch pulls in Xcode
+    # Command Line Tools (~7-8 GB) — a huge download just to get Node.js.
+    # Instead, use the official Node.js .pkg installer: ~30 MB download,
+    # ~150 MB installed, no Xcode or Homebrew required at all.
+    local ARCH PKG_ARCH LTS_DIR PKG_FILE
+    ARCH="$(uname -m)"
+    [[ "$ARCH" == "arm64" ]] && PKG_ARCH="arm64" || PKG_ARCH="x64"
+    LTS_DIR="https://nodejs.org/dist/latest-v22.x"
+
+    echo "  Installing official Node.js LTS from nodejs.org"
+    echo "  (~30 MB download — no Homebrew or Xcode Command Line Tools needed)"
     echo ""
-    echo "  Installing Node.js via Homebrew..."
-    brew install node
+
+    # Scrape the directory listing for the matching .pkg filename.
+    PKG_FILE=$(curl -fsSL "$LTS_DIR/" \
+      | grep -o "\"node-v[0-9.]*-darwin-${PKG_ARCH}\.pkg\"" \
+      | head -1 \
+      | tr -d '"')
+
+    if [[ -z "$PKG_FILE" ]]; then
+      echo ""
+      echo "  ⚠️   Could not detect the Node.js package filename automatically."
+      echo "      Please install Node.js LTS manually:"
+      echo "        1. Open https://nodejs.org/en/download/ in your browser"
+      echo "        2. Download the macOS .pkg installer"
+      echo "        3. Run it, then re-run this script"
+      echo ""
+      exit 1
+    fi
+
+    echo "  Downloading $PKG_FILE ..."
+    curl -fsSL "$LTS_DIR/$PKG_FILE" -o /tmp/lan_backup_node.pkg
+
+    echo "  Installing Node.js (you may be prompted for your Mac login password)..."
+    sudo installer -pkg /tmp/lan_backup_node.pkg -target /
+    rm -f /tmp/lan_backup_node.pkg
+    echo ""
   fi
 }
 
