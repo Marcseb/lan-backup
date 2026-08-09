@@ -7,5 +7,5 @@
 # Verify on Windows (PowerShell):
 #   Get-FileHash companion-server.zip -Algorithm SHA256
 
-e9b07e6c54699015fb9e8aa60a8079fadbbeba286137f6f3cad0dd1cad10c714  companion-server.tar.gz
-4077764b9f8eb90aa24a9b40016c622ea8c54d9a884a2ccdfd2abf52f8b4fa11  companion-server.zip
+8986169734e7052578f04ebb4111ab6ed65de690228dc6f7d9c9ed6cba099b57  companion-server.tar.gz
+92f54e2c76b8090678169adbdda5b4bf3150eb9ae0047f73f58c7f7a9b5b96ac  companion-server.zip
