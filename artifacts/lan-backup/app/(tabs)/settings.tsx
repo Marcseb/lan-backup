@@ -97,7 +97,23 @@ export default function SettingsScreen() {
   const [scanProgress, setScanProgress] = useState(0);
   const [discovered, setDiscovered] = useState<DiscoveredServer[]>([]);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [detectedSubnet, setDetectedSubnet] = useState<string | null>(null);
   const scanAbortRef = useRef<AbortController | null>(null);
+
+  /** Returns true if the subnet looks like a phone personal-hotspot network,
+   *  where the hotspot device enforces client isolation (devices can't see
+   *  each other, only reach the internet through the phone). */
+  function isPhoneHotspotSubnet(subnet: string): boolean {
+    // iOS Personal Hotspot always uses 172.20.10.x
+    // Common Android hotspot subnets vary by vendor
+    const HOTSPOT_PREFIXES = [
+      "172.20.10.",   // iOS Personal Hotspot
+      "192.168.43.",  // Android (many stock ROMs)
+      "192.168.49.",  // Android (Samsung, others)
+      "192.168.137.", // Windows ICS / some Android
+    ];
+    return HOTSPOT_PREFIXES.some((p) => subnet.startsWith(p));
+  }
 
   // Peer server addition flow
   const [addingPeer, setAddingPeer] = useState<{
@@ -164,6 +180,7 @@ export default function SettingsScreen() {
     setScanError(null);
     setDiscovered([]);
     setScanProgress(0);
+    setDetectedSubnet(null);
     setScanning(true);
 
     let ip: string;
@@ -182,6 +199,7 @@ export default function SettingsScreen() {
       return;
     }
     const subnet = `${parts[0]}.${parts[1]}.${parts[2]}.`;
+    setDetectedSubnet(subnet);
     const port = localPort.trim() || "7823";
 
     const ctrl = new AbortController();
@@ -369,9 +387,28 @@ export default function SettingsScreen() {
               <View style={styles.emptyState}>
                 <Feather name="wifi-off" size={32} color={colors.mutedForeground} />
                 <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  No LAN Backup servers found on this network.{"\n"}
-                  Make sure the companion server is running on your computer.
+                  No LAN Backup servers found on this network.
                 </Text>
+                {detectedSubnet && isPhoneHotspotSubnet(detectedSubnet) ? (
+                  <View style={[styles.hotspotWarning, { backgroundColor: "#fef9c3", borderColor: "#ca8a04" }]}>
+                    <Feather name="alert-triangle" size={14} color="#92400e" />
+                    <Text style={[styles.hotspotWarningText, { color: "#92400e" }]}>
+                      You appear to be on a phone hotspot ({detectedSubnet}0/24). Phone hotspots block
+                      direct connections between devices — your computer and phone can't see each other
+                      even on the same hotspot.{"\n\n"}
+                      <Text style={{ fontWeight: "700" }}>Fix:</Text> Connect both devices to a regular
+                      Wi-Fi router instead. Or, if you know your computer's IP address on this network,
+                      type it manually in the Server IP field.
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>
+                    Make sure the companion server is running on your computer.{"\n"}
+                    If you're sharing Wi-Fi from a phone hotspot, device-to-device
+                    connections are often blocked — use a regular Wi-Fi router or
+                    type the server IP manually.
+                  </Text>
+                )}
               </View>
             )}
             {discovered.length === 0 && scanning && (
@@ -1061,6 +1098,28 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     textAlign: "center",
     lineHeight: 20,
+  },
+  emptyHint: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    lineHeight: 19,
+    paddingHorizontal: 8,
+  },
+  hotspotWarning: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginHorizontal: 4,
+  },
+  hotspotWarningText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 19,
   },
   serverRow: {
     flexDirection: "row",
