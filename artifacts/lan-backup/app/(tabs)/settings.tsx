@@ -402,12 +402,26 @@ export default function SettingsScreen() {
                     </Text>
                   </View>
                 ) : (
-                  <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>
-                    Make sure the companion server is running on your computer.{"\n"}
-                    If you're sharing Wi-Fi from a phone hotspot, device-to-device
-                    connections are often blocked — use a regular Wi-Fi router or
-                    type the server IP manually.
-                  </Text>
+                  <View style={[styles.hotspotWarning, { backgroundColor: colors.accent, borderColor: colors.border }]}>
+                    <Feather name="info" size={14} color={colors.accentForeground} />
+                    <Text style={[styles.hotspotWarningText, { color: colors.accentForeground }]}>
+                      <Text style={{ fontWeight: "700" }}>Quick checklist:{"\n"}</Text>
+                      {"① "}Is the companion server running on the Mac/PC?{"\n"}
+                      {"② "}On macOS — did you click <Text style={{ fontWeight: "700" }}>Allow</Text> when asked about
+                      {" "}incoming connections? If not: System Settings → Network → Firewall → Options
+                      {" "}→ make sure Node.js or the server is not blocked.{"\n"}
+                      {"③ "}On a university or office network, access points often block
+                      {" "}device-to-device traffic (AP isolation) or put phones and computers
+                      {" "}on separate VLANs. Auto-scan won't work in that case.{"\n\n"}
+                      <Text style={{ fontWeight: "700" }}>Self-test:</Text> Open Safari on this phone
+                      {" "}and go to{" "}
+                      <Text style={{ fontFamily: "monospace" }}>
+                        http://{detectedSubnet ?? "YOUR-MAC-IP"}:7823/ping
+                      </Text>
+                      {" "}— if it loads, the server is reachable and you can type the IP manually above.
+                      {" "}If it times out, the network or Mac firewall is blocking it.
+                    </Text>
+                  </View>
                 )}
               </View>
             )}
