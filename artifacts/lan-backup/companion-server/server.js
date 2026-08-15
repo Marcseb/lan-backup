@@ -772,14 +772,30 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`  Server ID (TOFU)  : ${SERVER_ID}`);
   console.log(`  LAN IP addresses  :`);
   const nets = os.networkInterfaces();
+  const lanAddresses = [];
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {
       if (net.family === "IPv4" && !net.internal) {
+        lanAddresses.push(net.address);
         console.log(`    http://${net.address}:${PORT}`);
       }
     }
   }
   console.log("─────────────────────────────────────────────");
+  console.log("  macOS firewall check");
+  console.log("  If the app can't find this server, macOS may");
+  console.log("  be blocking incoming connections. To fix:");
+  console.log("  System Settings → Network → Firewall → Options");
+  console.log("  Make sure Node.js / node is set to Allow.");
+  console.log("  (A prompt may have appeared — choose Allow.)");
+  console.log("─────────────────────────────────────────────");
+  if (lanAddresses.length > 0) {
+    console.log("  Self-test from the phone:");
+    console.log(`  Open Safari → http://${lanAddresses[0]}:${PORT}/ping`);
+    console.log("  Should show: {\"id\":\"...\",\"version\":\"...\"}");
+    console.log("  If it times out → network or firewall is blocking.");
+    console.log("─────────────────────────────────────────────");
+  }
   console.log("  If you have lost the auth token, find it in:");
   console.log(`  ${ENV_FILE}  (LB_TOKEN line)`);
   console.log("─────────────────────────────────────────────");
