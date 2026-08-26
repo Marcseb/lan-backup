@@ -165,6 +165,8 @@ Any file type is supported — photos, documents, videos, archives.
 3. The app lists everything in `export/` — tap the files you want.
 4. Tap **Download to phone** — files are saved to your phone's local storage.
 
+On **iPhone and iPad**, each selected file opens its own iOS share sheet. Tap **Save to Files**, choose a visible folder, and confirm the save. Repeat this for each file — iOS does not allow the app to keep direct write access to a folder selected in Files.
+
 > To clear the list, delete or move the files out of `export/` after downloading.
 
 ---
