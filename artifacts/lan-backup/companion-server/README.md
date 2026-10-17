@@ -12,6 +12,8 @@ Pro features (Restore and Server Sync) require a one-time €5 contribution, unl
 
 Source code and updates: [github.com/Marcseb/lan-backup](https://github.com/Marcseb/lan-backup)
 
+The project is licensed under **GPL-3.0-only**; see the [LICENSE file](https://github.com/Marcseb/lan-backup/blob/main/LICENSE).
+
 ---
 
 ## Quick Start
@@ -168,7 +170,11 @@ Any file type is supported — photos, documents, videos, archives.
 1. Make sure the companion server is running on your computer.
 2. Open the **Restore** tab in the app.
 3. The app lists everything in `export/` — tap the files you want.
-4. Tap **Download to phone** — files are saved to your phone's local storage.
+4. Tap **Download & Save** on iOS or **Download to phone** on Android.
+
+On **iPhone and iPad**, standalone builds open the iOS Files picker for each file; choose a destination and confirm. In **Expo Go**, the share sheet is used instead—tap **Save to Files**. Cancelling a Files picker stops the remaining downloads.
+
+On **Android**, files are saved to the folder selected in the Restore tab.
 
 > To clear the list, delete or move the files out of `export/` after downloading.
 
