@@ -47,3 +47,5 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+artifacts/lan-backup/release/
+generated-artifacts/

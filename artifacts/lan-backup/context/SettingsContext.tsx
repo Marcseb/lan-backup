@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import React, {
   createContext,
   useCallback,
@@ -60,6 +61,27 @@ const KEYS = {
   peerServers: "lb_peer_servers",
 } as const;
 
+function getStoredValue(key: string): Promise<string | null> {
+  if (Platform.OS === "web") return Promise.resolve(localStorage.getItem(key));
+  return SecureStore.getItemAsync(key);
+}
+
+function setStoredValue(key: string, value: string): Promise<void> {
+  if (Platform.OS === "web") {
+    localStorage.setItem(key, value);
+    return Promise.resolve();
+  }
+  return SecureStore.setItemAsync(key, value);
+}
+
+function deleteStoredValue(key: string): Promise<void> {
+  if (Platform.OS === "web") {
+    localStorage.removeItem(key);
+    return Promise.resolve();
+  }
+  return SecureStore.deleteItemAsync(key);
+}
+
 interface SettingsContextValue {
   settings: Settings;
   isLoaded: boolean;
@@ -83,17 +105,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           ip, port, token, folder, fingerprint, compress, quality,
           restoreUnlocked, restoreUnlockKey, restoreFolder, peerServersRaw,
         ] = await Promise.all([
-          SecureStore.getItemAsync(KEYS.serverIp),
-          SecureStore.getItemAsync(KEYS.serverPort),
-          SecureStore.getItemAsync(KEYS.authToken),
-          SecureStore.getItemAsync(KEYS.targetFolder),
-          SecureStore.getItemAsync(KEYS.serverFingerprint),
-          SecureStore.getItemAsync(KEYS.compressImages),
-          SecureStore.getItemAsync(KEYS.imageQuality),
-          SecureStore.getItemAsync(KEYS.restoreUnlocked),
-          SecureStore.getItemAsync(KEYS.restoreUnlockKey),
-          SecureStore.getItemAsync(KEYS.restoreFolder),
-          SecureStore.getItemAsync(KEYS.peerServers),
+          getStoredValue(KEYS.serverIp),
+          getStoredValue(KEYS.serverPort),
+          getStoredValue(KEYS.authToken),
+          getStoredValue(KEYS.targetFolder),
+          getStoredValue(KEYS.serverFingerprint),
+          getStoredValue(KEYS.compressImages),
+          getStoredValue(KEYS.imageQuality),
+          getStoredValue(KEYS.restoreUnlocked),
+          getStoredValue(KEYS.restoreUnlockKey),
+          getStoredValue(KEYS.restoreFolder),
+          getStoredValue(KEYS.peerServers),
         ]);
 
         let peerServers: PeerServer[] = [];
@@ -128,9 +150,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings((prev) => ({ ...prev, [key]: value }));
     try {
       if (value === null || value === "") {
-        await SecureStore.deleteItemAsync(KEYS[key]);
+        await deleteStoredValue(KEYS[key]);
       } else {
-        await SecureStore.setItemAsync(KEYS[key], String(value));
+        await setStoredValue(KEYS[key], String(value));
       }
     } catch {
       // ignore on web
@@ -141,9 +163,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings((prev) => ({ ...prev, peerServers: servers }));
     try {
       if (servers.length === 0) {
-        await SecureStore.deleteItemAsync(KEYS.peerServers);
+        await deleteStoredValue(KEYS.peerServers);
       } else {
-        await SecureStore.setItemAsync(KEYS.peerServers, JSON.stringify(servers));
+        await setStoredValue(KEYS.peerServers, JSON.stringify(servers));
       }
     } catch {
       // ignore on web
@@ -154,25 +176,25 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(s);
     try {
       await Promise.all([
-        SecureStore.setItemAsync(KEYS.serverIp, s.serverIp),
-        SecureStore.setItemAsync(KEYS.serverPort, s.serverPort),
-        SecureStore.setItemAsync(KEYS.authToken, s.authToken),
-        SecureStore.setItemAsync(KEYS.targetFolder, s.targetFolder),
+        setStoredValue(KEYS.serverIp, s.serverIp),
+        setStoredValue(KEYS.serverPort, s.serverPort),
+        setStoredValue(KEYS.authToken, s.authToken),
+        setStoredValue(KEYS.targetFolder, s.targetFolder),
         s.serverFingerprint
-          ? SecureStore.setItemAsync(KEYS.serverFingerprint, s.serverFingerprint)
-          : SecureStore.deleteItemAsync(KEYS.serverFingerprint),
-        SecureStore.setItemAsync(KEYS.compressImages, String(s.compressImages)),
-        SecureStore.setItemAsync(KEYS.imageQuality, s.imageQuality),
-        SecureStore.setItemAsync(KEYS.restoreUnlocked, String(s.restoreUnlocked)),
+          ? setStoredValue(KEYS.serverFingerprint, s.serverFingerprint)
+          : deleteStoredValue(KEYS.serverFingerprint),
+        setStoredValue(KEYS.compressImages, String(s.compressImages)),
+        setStoredValue(KEYS.imageQuality, s.imageQuality),
+        setStoredValue(KEYS.restoreUnlocked, String(s.restoreUnlocked)),
         s.restoreUnlockKey
-          ? SecureStore.setItemAsync(KEYS.restoreUnlockKey, s.restoreUnlockKey)
-          : SecureStore.deleteItemAsync(KEYS.restoreUnlockKey),
+          ? setStoredValue(KEYS.restoreUnlockKey, s.restoreUnlockKey)
+          : deleteStoredValue(KEYS.restoreUnlockKey),
         s.restoreFolder
-          ? SecureStore.setItemAsync(KEYS.restoreFolder, s.restoreFolder)
-          : SecureStore.deleteItemAsync(KEYS.restoreFolder),
+          ? setStoredValue(KEYS.restoreFolder, s.restoreFolder)
+          : deleteStoredValue(KEYS.restoreFolder),
         s.peerServers.length > 0
-          ? SecureStore.setItemAsync(KEYS.peerServers, JSON.stringify(s.peerServers))
-          : SecureStore.deleteItemAsync(KEYS.peerServers),
+          ? setStoredValue(KEYS.peerServers, JSON.stringify(s.peerServers))
+          : deleteStoredValue(KEYS.peerServers),
       ]);
     } catch {
       // ignore on web

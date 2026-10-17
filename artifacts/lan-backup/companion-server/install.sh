@@ -218,6 +218,64 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo ""
 fi
 
+# -- Create / refresh desktop shortcut ----------------------------------------
+
+create_desktop_shortcut() {
+  if [[ "$OSTYPE" == darwin* ]]; then
+    local desktop app escaped_dir
+    desktop="$HOME/Desktop"
+    app="$desktop/Start LAN Backup Server.app"
+    mkdir -p "$desktop"
+
+    if [[ ! -d "$app/Contents" ]]; then
+      escaped_dir="${SCRIPT_DIR//\\/\\\\}"
+      escaped_dir="${escaped_dir//\"/\\\"}"
+      if ! /usr/bin/osacompile -o "$app" \
+        -e 'tell application "Terminal" to activate' \
+        -e "tell application \"Terminal\" to do script \"cd \\\"$escaped_dir\\\" && ./install.sh\""; then
+        echo "  [!] Could not create the macOS desktop shortcut."
+        return
+      fi
+    fi
+
+    mkdir -p "$app/Contents/Resources"
+    if [[ -f "$SCRIPT_DIR/lan-backup.icns" ]]; then
+      cp "$SCRIPT_DIR/lan-backup.icns" "$app/Contents/Resources/LANBackup.icns"
+      /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile LANBackup.icns" \
+        "$app/Contents/Info.plist" 2>/dev/null ||
+        /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string LANBackup.icns" \
+          "$app/Contents/Info.plist"
+      touch "$app"
+      echo "  [OK] macOS desktop shortcut created with the LAN Backup icon."
+    else
+      echo "  [!] LAN Backup icon file is missing; shortcut created without a custom icon."
+    fi
+  else
+    local desktop desktop_file desktop_exec
+    desktop="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
+    [[ -n "$desktop" ]] || desktop="$HOME/Desktop"
+    mkdir -p "$desktop"
+    desktop_file="$desktop/Start LAN Backup Server.desktop"
+    desktop_exec=$(printf '%s' "$SCRIPT_DIR/install.sh" |
+      sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+    cat > "$desktop_file" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Start LAN Backup Server
+Comment=Start the LAN Backup companion server
+Exec=/bin/bash "$desktop_exec"
+Icon=$SCRIPT_DIR/lan-backup.png
+Terminal=true
+Categories=Utility;
+EOF
+    chmod +x "$desktop_file"
+    gio set "$desktop_file" metadata::trusted true 2>/dev/null || true
+    echo "  [OK] Linux desktop shortcut created with the LAN Backup icon."
+  fi
+}
+
+create_desktop_shortcut
+
 echo ""
 echo "─────────────────────────────────────────────────"
 echo "  Starting LAN Backup server..."

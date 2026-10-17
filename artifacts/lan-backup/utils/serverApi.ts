@@ -7,7 +7,7 @@ import {
   cacheDirectory,
 } from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
-import { Image } from "react-native";
+import { Image, Platform } from "react-native";
 import type { ImageQuality, Settings } from "@/context/SettingsContext";
 import type { SelectedFile } from "@/context/TransferContext";
 
@@ -219,6 +219,39 @@ export async function downloadExportFile(
   }
 }
 
+export async function downloadExportBlob(
+  settings: Settings,
+  filename: string,
+  onProgress?: (received: number, total: number) => void
+): Promise<Blob> {
+  const safeFilename = filename.split("/").pop() ?? filename;
+  const url = `${baseUrl(settings)}/export/file?name=${encodeURIComponent(safeFilename)}`;
+
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("GET", url);
+    request.responseType = "blob";
+    for (const [key, value] of Object.entries(authHeaders(settings))) {
+      request.setRequestHeader(key, value);
+    }
+    request.onprogress = (event) => {
+      onProgress?.(event.loaded, event.lengthComputable ? event.total : 0);
+    };
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) {
+        resolve(request.response as Blob);
+      } else if (request.status === 401) {
+        reject(new Error("Unauthorized — check your auth token"));
+      } else {
+        reject(new Error(`Download failed: ${request.status}`));
+      }
+    };
+    request.onerror = () => reject(new Error("Download failed — check the network connection"));
+    request.onabort = () => reject(new Error("Download cancelled"));
+    request.send();
+  });
+}
+
 // ── Peer-to-peer server sync ──────────────────────────────────────────────────
 
 export interface PeerSyncDestination {
@@ -312,6 +345,43 @@ export async function uploadFile(
   onProgress?: (sent: number, total: number) => void
 ): Promise<UploadResult> {
   onProgress?.(0, file.size);
+
+  if (Platform.OS === "web") {
+    const source = await fetch(file.uri);
+    if (!source.ok) throw new Error(`Could not read the selected file: ${source.status}`);
+    const form = new FormData();
+    form.append("targetFolder", settings.targetFolder);
+    form.append("filename", file.name);
+    if (file.relativePath) form.append("relativePath", file.relativePath);
+    form.append("file", await source.blob(), file.name);
+
+    return new Promise((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open("POST", `${baseUrl(settings)}/upload`);
+      for (const [key, value] of Object.entries(authHeaders(settings))) {
+        request.setRequestHeader(key, value);
+      }
+      request.upload.onprogress = (event) => {
+        onProgress?.(event.loaded, event.lengthComputable ? event.total : file.size);
+      };
+      request.onload = () => {
+        if (request.status === 401) return reject(new Error("Unauthorized — check your auth token"));
+        if (request.status === 429) return reject(new Error("Rate limited by server — slow down"));
+        if (request.status < 200 || request.status >= 300) {
+          return reject(new Error(`Upload failed: ${request.status} ${request.responseText}`));
+        }
+        try {
+          resolve(JSON.parse(request.responseText) as UploadResult);
+          onProgress?.(file.size, file.size);
+        } catch {
+          reject(new Error("The server returned an invalid upload response"));
+        }
+      };
+      request.onerror = () => reject(new Error("Upload failed — check the network connection"));
+      request.onabort = () => reject(new Error("Upload cancelled"));
+      request.send(form);
+    });
+  }
 
   // SAF content:// URIs cannot be read directly by either the new v19 File API
   // or the legacy uploadAsync native module.  Copy to a cache file:// path

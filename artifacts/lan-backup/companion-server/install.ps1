@@ -118,6 +118,7 @@ try {
     $Shortcut.Arguments        = "/k `"cd /d `"$ScriptDir`" && node server.js`""
     $Shortcut.WorkingDirectory = $ScriptDir
     $Shortcut.Description      = "Start LAN Backup companion server"
+    $Shortcut.IconLocation     = "$ScriptDir\lan-backup.ico,0"
     $Shortcut.Save()
     Write-Host "  [OK] Shortcut created on Desktop."
 } catch {

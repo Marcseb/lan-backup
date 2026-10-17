@@ -1,0 +1,2 @@
+- [iOS restore destinations](ios-restore-destinations.md) — standalone builds use a native Files export picker; Expo Go retains the share-sheet fallback.
+- [Private Android releases](private-android-releases.md) — native prebuild regenerates signing settings; limited build memory favors a single ABI and few workers.
