@@ -10,6 +10,8 @@ Back up files from your phone to your computer over Wi-Fi — no cloud, no accou
 
 Pro features (Restore and Server Sync) require a one-time €5 contribution, unlocked via PayPal directly inside the app.
 
+LAN Backup is licensed under **GPL-3.0-only**. See the [LICENSE](LICENSE) file.
+
 ---
 
 ## Quick Start
@@ -94,7 +96,7 @@ The token is then displayed — **this is the only time it is shown**:
 
 Copy it — you will paste it into the app in the next step. On every restart the server loads the token silently from `.env`; you will not be prompted again.
 
-A **desktop shortcut** is also created so you can start the server with one click in the future.
+A desktop shortcut with the LAN Backup icon is created on Windows, macOS, and Linux so you can start the server with one click in the future.
 
 ---
 
@@ -163,9 +165,11 @@ Any file type is supported — photos, documents, videos, archives.
 1. Make sure the companion server is running on your computer.
 2. Open the **Restore** tab in the app.
 3. The app lists everything in `export/` — tap the files you want.
-4. Tap **Download to phone** — files are saved to your phone's local storage.
+4. Tap **Download & Save** on iOS or **Download to phone** on Android.
 
-On **iPhone and iPad**, each selected file opens its own iOS share sheet. Tap **Save to Files**, choose a visible folder, and confirm the save. Repeat this for each file — iOS does not allow the app to keep direct write access to a folder selected in Files.
+On **iPhone and iPad**, standalone builds open the iOS Files picker for each file; choose a destination and confirm. In **Expo Go**, the share sheet is used instead—tap **Save to Files**. Cancelling a Files picker stops the remaining downloads.
+
+On **Android**, files are saved to the folder selected in the Restore tab.
 
 > To clear the list, delete or move the files out of `export/` after downloading.
 
