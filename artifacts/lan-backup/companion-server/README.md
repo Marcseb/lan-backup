@@ -76,7 +76,6 @@ On first launch, the server asks how you want to set your auth token:
 ```
 
 Press **Enter** (or type **1**) to generate one automatically. Type **2** to enter your own.
-
 The token is then displayed — **this is the only time it is shown**:
 
 ```
@@ -96,7 +95,7 @@ The token is then displayed — **this is the only time it is shown**:
 
 Copy it — you will paste it into the app in the next step. On every restart the server loads the token silently from `.env`; you will not be prompted again.
 
-A **desktop shortcut** is also created so you can start the server with one click in the future.
+A **desktop shortcut with the LAN Backup app icon** is also created so you can start the server with one click in the future. This is supported on Windows, macOS, and Linux.
 
 ---
 

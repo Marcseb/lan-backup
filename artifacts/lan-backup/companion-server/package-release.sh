@@ -36,6 +36,9 @@ cp "$SCRIPT_DIR/server.js"   "$PKG/"
 cp "$SCRIPT_DIR/install.sh"  "$PKG/" 2>/dev/null || true
 cp "$SCRIPT_DIR/install.ps1" "$PKG/" 2>/dev/null || true
 cp "$SCRIPT_DIR/README.md"   "$PKG/" 2>/dev/null || true
+cp "$SCRIPT_DIR/lan-backup.png"  "$PKG/"
+cp "$SCRIPT_DIR/lan-backup.ico"  "$PKG/"
+cp "$SCRIPT_DIR/lan-backup.icns" "$PKG/"
 
 TAR_GZ="$TMP/companion-server.tar.gz"
 ZIP_FILE="$TMP/companion-server.zip"

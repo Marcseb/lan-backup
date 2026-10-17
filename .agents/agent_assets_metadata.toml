@@ -11,3 +11,109 @@ id = "h972HL3hd268pJop9xJpv"
 uri = "file://attached_assets/expo-qr.png"
 type = "image"
 title = "LAN Backup — Expo Go QR Code"
+logical_id = "8631a92f-0af2-4635-a5f9-c96706c0bc87"
+
+[[outputs]]
+id = "pz3HDTvhipY4kcHP9mxqg"
+uri = "file://artifacts/lan-backup-demo/public/audio/bg_music.mp3"
+type = "audio"
+title = "background music for LAN Backup demo video"
+logical_id = "879e8a29-2546-4f8a-9688-24028aea9fdb"
+
+[[outputs]]
+id = "a-tUcSpHMPjbEpZPbM3yN"
+uri = "file://artifacts/lan-backup/release/lan-backup-1.0.0-arm64-signed.apk"
+type = "unspecified"
+title = "LAN Backup Android APK (ARM64)"
+description = "Signed private-use Android release, version 1.0.0. Download and install on an ARM64 Android phone."
+logical_id = "55396261-f5bb-4126-89d6-b823d3b70397"
+content_hash = "sha256:23c5dbfdde12e0835762ec3bd03157231f3f91959a34a5dafefcdb114a7e9a18"
+size = 40538181
+mtime_ms = 1790241961610
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:6ea29a26-a374-4b67-ac7b-a6eb0c7421ee/55396261-f5bb-4126-89d6-b823d3b70397/75ff050c-ec4e-4f2f-ba9b-87ee288a46b2"
+storage_version_token = "1790241968505592"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "B4CjgerKYwD2181GwDabu"
+uri = "file://.local/lan-backup-signing-backup.zip"
+type = "unspecified"
+title = "Android signing key backup"
+description = "Keep this encrypted keystore archive and the password you entered in separate secure places. Both are required to sign future updates."
+logical_id = "c83904ed-7f7e-4f92-82e8-b7e5bfdff99c"
+content_hash = "sha256:41a95b58ae09c3877d365ae9dc12dc02428fb78f579594beea81d38ba16433ce"
+size = 3670
+mtime_ms = 1790241961625
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:6ea29a26-a374-4b67-ac7b-a6eb0c7421ee/c83904ed-7f7e-4f92-82e8-b7e5bfdff99c/7d8fc1ff-201b-48e9-b6e3-d4b52315df5f"
+storage_version_token = "1790241974890180"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "SapD9zZnM_74_ZnP3ZQVo"
+uri = "file://artifacts/lan-backup/release/lan-backup-1.0.0-arm64-signed.zip"
+type = "unspecified"
+title = "LAN Backup APK (ZIP download)"
+description = "If your phone blocks APK downloads, download this ZIP, extract it in Files, then tap the APK inside to install."
+logical_id = "cc42385f-1a83-4c1f-9c8e-519ddb9b027f"
+content_hash = "sha256:65224cd130ad1f8b67f373bfa478ac9337c6eb26b679947b143ad471d6c5cc00"
+size = 40538397
+mtime_ms = 1790244786717
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:6ea29a26-a374-4b67-ac7b-a6eb0c7421ee/cc42385f-1a83-4c1f-9c8e-519ddb9b027f/e8785e0b-1a02-4d00-ba78-3a04b1c30183"
+storage_version_token = "1790244793173788"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "tFX-EvY2b20p4YtpQtu9D"
+uri = "file://artifacts/lan-backup/android/app/build/outputs/apk/release/app-release.apk"
+type = "unspecified"
+title = "LAN Backup Android APK 1.0.1"
+description = "Signed Android release APK (version code 2) with native streaming restore support. Install over version 1.0.0."
+logical_id = "aebd9906-8df7-458b-85f2-ab3e3dd69800"
+content_hash = "sha256:f850b4b7b22af2d46dca072709d1a38b34e2b13f58c49cb9b52fb6d9822555e5"
+size = 40539133
+mtime_ms = 1791743900575
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:6ea29a26-a374-4b67-ac7b-a6eb0c7421ee/aebd9906-8df7-458b-85f2-ab3e3dd69800/e6a834c2-3576-43bc-bb7a-c039ebb297e6"
+storage_version_token = "1791743939613546"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "8WJ25f2ry1VlNIK_aX8dl"
+uri = "file://generated-artifacts/lan-backup-ios-build.zip"
+type = "unspecified"
+title = "LAN Backup iOS Mac build ZIP"
+description = "Current tracked project source prepared for the macOS iPhone build runner. Excludes Git history, installed dependencies, local uploads, and secret/key files."
+logical_id = "ba9fc29e-b5c8-4270-9a74-a2aa6c20d786"
+content_hash = "sha256:d4f698ea9bd6318a727da1d1f6e36cd27ea609edde94967117fef84857218e61"
+size = 3086417
+mtime_ms = 1792090566383
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:6ea29a26-a374-4b67-ac7b-a6eb0c7421ee/ba9fc29e-b5c8-4270-9a74-a2aa6c20d786/318c4e09-ea1b-40e3-9113-25f8ee1a2701"
+storage_version_token = "1792090573417075"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "MwmCSYvPFXm7QtxMY15NJ"
+uri = "file://generated-artifacts/lan-backup-ios-macos-guide.pdf"
+type = "pdf"
+title = "LAN Backup iPhone and Mac setup guide (PDF)"
+description = "Printable guide covering the iPhone Xcode build, macOS companion-server installation, icon desktop shortcut, connection setup, and troubleshooting."
+logical_id = "1213b172-b9a9-4fde-b320-4678cc79447f"
+content_hash = "sha256:09cd813325f6fc9469adf90833f7e61ead881855ab8cbdf84ddb25030e64f747"
+size = 97082
+mtime_ms = 1792147911715
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:6ea29a26-a374-4b67-ac7b-a6eb0c7421ee/1213b172-b9a9-4fde-b320-4678cc79447f/26151d1e-8a80-4941-9c24-02d15c6c31ff"
+storage_version_token = "1792147937181598"
+content_type = "application/pdf"
+
+[[outputs]]
+id = "-MupGRLpyptEmC5iLbSCU"
+uri = "file://generated-artifacts/lan-backup-ios-macos-guide.html"
+type = "html"
+title = "LAN Backup iPhone and Mac setup guide (HTML)"
+description = "Self-contained browser version of the setup guide; print or save it as a PDF from your browser."
+logical_id = "41a94f5c-7b08-4bc6-9120-e8be8a6db396"
+content_hash = "sha256:03490903af49880662e6a2cab6e587b1cda6e769a1578a6b7428ea883132fba0"
+size = 11365
+mtime_ms = 1792147898903
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:6ea29a26-a374-4b67-ac7b-a6eb0c7421ee/41a94f5c-7b08-4bc6-9120-e8be8a6db396/05b88bc4-4729-41cd-a961-d1844d56d7fc"
+storage_version_token = "1792147938115614"
+content_type = "text/html"

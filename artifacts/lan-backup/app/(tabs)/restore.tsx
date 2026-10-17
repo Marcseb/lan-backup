@@ -6,11 +6,13 @@ import {
   writeAsStringAsync,
   deleteAsync,
   EncodingType,
+  makeDirectoryAsync,
   StorageAccessFramework,
 } from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
 import { openURL } from "expo-linking";
 import { useFocusEffect } from "expo-router";
+import * as Sharing from "expo-sharing";
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -31,7 +33,8 @@ import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "@/context/SettingsContext";
 import { useColors } from "@/hooks/useColors";
-import { type ExportFile, downloadExportFile, listExportFiles, pingServer } from "@/utils/serverApi";
+import { type ExportFile, downloadExportBlob, downloadExportFile, listExportFiles, pingServer } from "@/utils/serverApi";
+import LanBackupSaf from "@/utils/lanBackupSaf";
 
 // Replit API server base URL (deployed)
 const UNLOCK_API = process.env.EXPO_PUBLIC_DOMAIN
@@ -50,6 +53,29 @@ function formatSize(bytes: number): string {
 function formatDate(ms: number): string {
   const d = new Date(ms);
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function getShareMimeType(filename: string): string {
+  const extension = filename.split(".").pop()?.toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    csv: "text/csv",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    gif: "image/gif",
+    heic: "image/heic",
+    jpeg: "image/jpeg",
+    jpg: "image/jpeg",
+    json: "application/json",
+    mov: "video/quicktime",
+    mp3: "audio/mpeg",
+    mp4: "video/mp4",
+    pdf: "application/pdf",
+    png: "image/png",
+    txt: "text/plain",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  };
+  return (extension && mimeTypes[extension]) ?? "application/octet-stream";
 }
 
 interface FileItemProps {
@@ -439,14 +465,19 @@ export default function RestoreScreen() {
     });
   };
 
-  // On iOS, SAF doesn't exist — files go straight to the app's documentDirectory
-  // (visible in Files app → On My iPhone → LAN Backup).
+  // iOS standalone builds use the native Files export picker; Expo Go falls
+  // back to the share sheet because it cannot load this app's native module.
   const IOS_DEST = "ios-documents";
 
   const pickRestoreFolder = async () => {
     if (Platform.OS === "ios") {
       await updateSetting("restoreFolder", IOS_DEST);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      return;
+    }
+    if (Platform.OS === "web") {
+      await updateSetting("restoreFolder", "browser-downloads");
+      Alert.alert("Download destination", "Restored files will be saved using the Mac app's Downloads location.");
       return;
     }
     try {
@@ -467,6 +498,13 @@ export default function RestoreScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS === "web" && !settings.restoreFolder) {
+      updateSetting("restoreFolder", "browser-downloads");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const startDownload = async () => {
     if (selected.size === 0) {
       Alert.alert("Nothing selected", "Select at least one file to download.");
@@ -483,6 +521,7 @@ export default function RestoreScreen() {
 
     const toDownload = files.filter((f) => selected.has(f.name));
     const localResults: Record<string, "ok" | "error"> = {};
+    let userCancelledExport = false;
 
     for (const file of toDownload) {
       if (cancelRef.current) break;
@@ -491,37 +530,88 @@ export default function RestoreScreen() {
 
       try {
         if (Platform.OS === "ios") {
-          // iOS: SAF is unavailable — download directly to documentDirectory
-          // (visible in Files app → On My iPhone → LAN Backup)
-          const finalUri = `${documentDirectory}${file.name}`;
-          await downloadExportFile(settings, file.name, finalUri, (recv, total) => {
+          // Download one file to cache, then export it using the app's native
+          // Files picker. Expo Go has no custom module, so preserve its share
+          // sheet behavior as a fallback.
+          const originalName = file.name.split(/[\\/]/).pop() || "restored-file";
+          const shareDirectory = `${cacheDirectory}lb_restore_share/`;
+          const shareUri = `${shareDirectory}${originalName}`;
+          try {
+            await makeDirectoryAsync(shareDirectory, { intermediates: true });
+            await downloadExportFile(settings, file.name, shareUri, (recv, total) => {
+              if (total > 0) {
+                setFileProgress((prev) => ({ ...prev, [file.name]: recv / total }));
+              }
+            });
+
+            if (LanBackupSaf?.exportToFiles) {
+              const result = await LanBackupSaf.exportToFiles(shareUri);
+              if (result === "cancelled") {
+                setFileProgress((prev) => ({ ...prev, [file.name]: null }));
+                userCancelledExport = true;
+                break;
+              }
+            } else {
+              const available = await Sharing.isAvailableAsync();
+              if (!available) {
+                throw new Error("The iOS share sheet is unavailable on this device.");
+              }
+              await Sharing.shareAsync(shareUri, {
+                dialogTitle: `Save ${file.name} to Files`,
+                mimeType: getShareMimeType(file.name),
+                UTI: "public.data",
+              });
+            }
+          } finally {
+            await deleteAsync(shareUri, { idempotent: true }).catch(() => {});
+          }
+        } else if (Platform.OS === "web") {
+          const blob = await downloadExportBlob(settings, file.name, (recv, total) => {
             if (total > 0) {
               setFileProgress((prev) => ({ ...prev, [file.name]: recv / total }));
             }
           });
+          const objectUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = file.name.split(/[\\/]/).pop() || "restored-file";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
         } else {
-          // Android: SAF flow — pick a content:// URI, copy via base64
+          // Android: download to disk, then stream into the SAF URI natively.
           const destUri = await StorageAccessFramework.createFileAsync(
             settings.restoreFolder!,
             file.name,
             "application/octet-stream"
           );
-
           const cacheUri = `${cacheDirectory}lb_restore_${Date.now()}_${file.name}`;
-
-          await downloadExportFile(settings, file.name, cacheUri, (recv, total) => {
-            if (total > 0) {
-              setFileProgress((prev) => ({ ...prev, [file.name]: recv / total }));
+          try {
+            await downloadExportFile(settings, file.name, cacheUri, (recv, total) => {
+              if (total > 0) {
+                setFileProgress((prev) => ({ ...prev, [file.name]: recv / total }));
+              }
+            });
+            if (LanBackupSaf) {
+              await LanBackupSaf.copyFileToUri(cacheUri, destUri);
+            } else {
+              // Expo Go has no custom module; retain its small-file fallback.
+              const base64 = await readAsStringAsync(cacheUri, {
+                encoding: EncodingType.Base64,
+              });
+              await writeAsStringAsync(destUri, base64, {
+                encoding: EncodingType.Base64,
+              });
             }
-          });
-
-          const base64 = await readAsStringAsync(cacheUri, {
-            encoding: EncodingType.Base64,
-          });
-          await writeAsStringAsync(destUri, base64, {
-            encoding: EncodingType.Base64,
-          });
-          await deleteAsync(cacheUri, { idempotent: true }).catch(() => {});
+          } catch (error) {
+            if (LanBackupSaf) {
+              await LanBackupSaf.deleteUri(destUri).catch(() => {});
+            }
+            throw error;
+          } finally {
+            await deleteAsync(cacheUri, { idempotent: true }).catch(() => {});
+          }
         }
 
         setFileProgress((prev) => ({ ...prev, [file.name]: 1 }));
@@ -550,11 +640,11 @@ export default function RestoreScreen() {
     setDownloading(false);
     setSelected(new Set());
     const anySucceeded = Object.values(localResults).some((r) => r === "ok");
-    Haptics.notificationAsync(
-      anySucceeded
-        ? Haptics.NotificationFeedbackType.Success
-        : Haptics.NotificationFeedbackType.Error
-    );
+    if (anySucceeded) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else if (!userCancelledExport) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
   };
 
   // ── Not unlocked → show paywall ──
@@ -575,11 +665,14 @@ export default function RestoreScreen() {
     );
   }
 
-  const folderLabel = settings.restoreFolder
-    ? settings.restoreFolder === "ios-documents"
-      ? "Files app (On My iPhone)"
-      : settings.restoreFolder.split("%3A").pop()?.split("%2F").pop() ?? "Selected folder"
-    : null;
+  const folderLabel =
+    Platform.OS === "ios"
+      ? "Files destination (one file at a time)"
+      : Platform.OS === "web"
+        ? "Downloads folder"
+      : settings.restoreFolder
+        ? settings.restoreFolder.split("%3A").pop()?.split("%2F").pop() ?? "Selected folder"
+        : null;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -599,7 +692,9 @@ export default function RestoreScreen() {
       >
         {/* Destination folder */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>DESTINATION FOLDER</Text>
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+            {Platform.OS === "ios" ? "SAVE TO FILES" : Platform.OS === "web" ? "DOWNLOAD DESTINATION" : "DESTINATION FOLDER"}
+          </Text>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.folderRow}>
               <Feather name="folder" size={18} color={colors.primary} />
@@ -607,13 +702,21 @@ export default function RestoreScreen() {
                 <Text style={[styles.folderLabel, { color: colors.foreground }]}>
                   {folderLabel ?? "No folder selected"}
                 </Text>
-                {!folderLabel && (
+                {Platform.OS === "ios" ? (
+                  <Text style={[styles.folderHint, { color: colors.mutedForeground }]}>
+                    Choose a destination in the Files picker for each file. Cancel to stop the remaining downloads.
+                  </Text>
+                ) : Platform.OS === "web" ? (
+                  <Text style={[styles.folderHint, { color: colors.mutedForeground }]}>
+                    Restored files are saved through the Mac app to your Downloads folder.
+                  </Text>
+                ) : !folderLabel ? (
                   <Text style={[styles.folderHint, { color: colors.mutedForeground }]}>
                     Files will be saved here on your phone
                   </Text>
-                )}
+                ) : null}
               </View>
-              {Platform.OS !== "ios" && (
+              {Platform.OS !== "ios" && Platform.OS !== "web" && (
                 <TouchableOpacity
                   onPress={pickRestoreFolder}
                   style={[styles.folderBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
@@ -734,7 +837,13 @@ export default function RestoreScreen() {
                 <Feather name="download" size={18} color={colors.primaryForeground} />
               )}
               <Text style={[styles.downloadBtnText, { color: colors.primaryForeground }]}>
-                {downloading ? "Downloading…" : "Download to phone"}
+                {downloading
+                  ? Platform.OS === "ios"
+                    ? "Saving…"
+                    : "Downloading…"
+                  : Platform.OS === "ios"
+                    ? "Download & Save"
+                    : "Download to phone"}
               </Text>
             </TouchableOpacity>
           </View>

@@ -75,6 +75,11 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  # Force @react-navigation/native to 7.3.x so all react-navigation packages
+  # (bottom-tabs, native-stack, elements) get createScreenFactory — which was
+  # added in 7.3.x.  expo-router 6.x pins 7.2.4 internally but its own
+  # transitive deps require ^7.3.8, causing a peer mismatch that crashes Expo Go.
+  "@react-navigation/native": "^7.3.8"
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
   "esbuild>@esbuild/darwin-x64": "-"

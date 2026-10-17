@@ -1,0 +1,9 @@
+{
+  "platforms": ["android", "apple"],
+  "apple": {
+    "modules": ["LanBackupSafModule"]
+  },
+  "android": {
+    "modules": ["com.marcseb.lanbackupsaf.LanBackupSafModule"]
+  }
+}

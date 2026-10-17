@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "postgresql-16"]
+modules = ["nodejs-24", "postgresql-16", "python-base-3.13"]
 
 [deployment]
 router = "application"
@@ -46,3 +46,4 @@ PAYPAL_MERCHANT_ID = "7AUYVWJE39NMQ"
 
 [nix]
 channel = "stable-25_05"
+packages = ["jdk17", "android-tools"]

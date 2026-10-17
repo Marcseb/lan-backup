@@ -2,7 +2,7 @@
   "expo": {
     "name": "LAN Backup",
     "slug": "lan-backup",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lan-backup",
@@ -14,9 +14,13 @@
       "backgroundColor": "#0f172a"
     },
     "ios": {
+      "bundleIdentifier": "com.marcseb.lanbackup",
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "package": "com.marcseb.lanbackup",
+      "versionCode": 2
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -30,7 +34,8 @@
       "expo-font",
       "expo-web-browser",
       "expo-secure-store",
-      "expo-document-picker"
+      "expo-document-picker",
+      "./plugins/withLanHttp"
     ],
     "experiments": {
       "typedRoutes": true,
