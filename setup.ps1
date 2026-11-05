@@ -33,14 +33,17 @@ function Bail($msg) {
     exit 1
 }
 
-# Creates a desktop shortcut (.lnk) that re-runs this setup.ps1.
-# Safe to call multiple times -- skips silently if the shortcut already exists.
+# Creates the same branded shortcut as companion-server/install.ps1.
+# The server installer refreshes this shortcut again when it starts.
 function Create-Shortcut {
     $DesktopPath = [Environment]::GetFolderPath("Desktop")
     if ([string]::IsNullOrEmpty($DesktopPath) -or -not (Test-Path $DesktopPath)) { return }
 
-    $ShortcutPath = Join-Path $DesktopPath "LAN Backup Server.lnk"
-    if (Test-Path $ShortcutPath) { return }
+    $ShortcutPath = Join-Path $DesktopPath "Start LAN Backup Server.lnk"
+    $IconPath = Join-Path $ServerDir "lan-backup.ico"
+    if (-not (Test-Path $IconPath)) {
+        Write-Host "  (LAN Backup icon file is missing; shortcut icon may be generic.)"
+    }
 
     try {
         $WshShell  = New-Object -ComObject WScript.Shell
@@ -49,8 +52,15 @@ function Create-Shortcut {
         $Shortcut.Arguments       = "-ExecutionPolicy Bypass -File `"$DestDir\setup.ps1`""
         $Shortcut.WorkingDirectory = $DestDir
         $Shortcut.Description     = "Start LAN Backup companion server"
-        $Shortcut.IconLocation    = "shell32.dll,22"
+        if (Test-Path $IconPath) {
+            $Shortcut.IconLocation = "$IconPath,0"
+        }
         $Shortcut.Save()
+        # Remove the old setup shortcut only after the branded replacement exists.
+        $LegacyShortcutPath = Join-Path $DesktopPath "LAN Backup Server.lnk"
+        if (Test-Path $LegacyShortcutPath) {
+            Remove-Item -LiteralPath $LegacyShortcutPath -Force -ErrorAction SilentlyContinue
+        }
         Write-Host "  Desktop shortcut created:"
         Write-Host "  $ShortcutPath"
     } catch {
