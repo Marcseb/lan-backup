@@ -46,9 +46,11 @@ explicit. The repository-file URLs are alternatives after this folder is pushed.
 
 ## Store URL placeholders
 
-Replace `{{LAN_BACKUP_GOOGLE_PLAY_URL}}` with the published Play Store listing
-URL when it is available. Replace `{{LAN_BACKUP_APP_STORE_URL}}` only if an iOS
-store listing is published. Until then, those store links stay disabled.
+The section's Android APK button and embedded QR code point to the currently
+uploaded v1.1.0 APK asset. Replace `{{LAN_BACKUP_GOOGLE_PLAY_URL}}` with the
+published Play Store listing URL when it is available. Replace
+`{{LAN_BACKUP_APP_STORE_URL}}` only if an iOS store listing is published. Until
+then, those store links stay disabled.
 
 ## Rebuilding the archive files
 
