@@ -1,0 +1,477 @@
+<!--
+  Embeddable LAN Backup installation section.
+  The server setup URLs below are live. Replace the store placeholders only
+  after the corresponding listings have been published.
+-->
+<section id="lan-backup-install" aria-labelledby="lb-install-title">
+  <style>
+    #lan-backup-install {
+      --lb-ink: #153447;
+      --lb-muted: #5c7180;
+      --lb-line: #d5e1e8;
+      --lb-blue: #176b87;
+      --lb-blue-dark: #10536a;
+      --lb-tint: #f1f8fb;
+      --lb-accent: #f1a65b;
+      box-sizing: border-box;
+      color: var(--lb-ink);
+      font: inherit;
+      margin: 2.5rem auto;
+      max-width: 1120px;
+      padding: 0 1rem;
+    }
+    #lan-backup-install *,
+    #lan-backup-install *::before,
+    #lan-backup-install *::after { box-sizing: border-box; }
+    #lan-backup-install .lb-hero {
+      background: var(--lb-tint);
+      border: 1px solid var(--lb-line);
+      border-radius: 24px;
+      padding: clamp(1.4rem, 4vw, 3rem);
+    }
+    #lan-backup-install .lb-eyebrow {
+      color: var(--lb-blue);
+      font-size: .76rem;
+      font-weight: 750;
+      letter-spacing: .12em;
+      margin: 0 0 .8rem;
+      text-transform: uppercase;
+    }
+    #lan-backup-install h2,
+    #lan-backup-install h3,
+    #lan-backup-install h4 {
+      color: var(--lb-ink);
+      line-height: 1.2;
+      margin: 0;
+    }
+    #lan-backup-install h2 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      letter-spacing: -.035em;
+      max-width: 22ch;
+    }
+    #lan-backup-install h3 { font-size: 1.18rem; }
+    #lan-backup-install p {
+      color: var(--lb-muted);
+      line-height: 1.58;
+      margin: .65rem 0 0;
+    }
+    #lan-backup-install .lb-intro {
+      font-size: 1.05rem;
+      max-width: 68ch;
+    }
+    #lan-backup-install .lb-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr);
+      margin-top: 1.5rem;
+    }
+    #lan-backup-install .lb-card {
+      background: #fff;
+      border: 1px solid var(--lb-line);
+      border-radius: 18px;
+      min-width: 0;
+      padding: clamp(1.1rem, 2.5vw, 1.6rem);
+    }
+    #lan-backup-install .lb-card-head {
+      align-items: flex-start;
+      display: flex;
+      gap: .8rem;
+      justify-content: space-between;
+    }
+    #lan-backup-install .lb-tag {
+      background: #e3f1f6;
+      border-radius: 999px;
+      color: var(--lb-blue-dark);
+      flex: none;
+      font-size: .75rem;
+      font-weight: 700;
+      padding: .35rem .6rem;
+    }
+    #lan-backup-install .lb-button {
+      align-items: center;
+      background: var(--lb-blue);
+      border: 1px solid var(--lb-blue);
+      border-radius: 10px;
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      font: inherit;
+      font-weight: 700;
+      justify-content: center;
+      margin-top: 1rem;
+      min-height: 48px;
+      padding: .7rem 1rem;
+      text-align: center;
+      text-decoration: none;
+      transition: background-color 140ms ease, transform 140ms ease;
+      width: 100%;
+    }
+    #lan-backup-install .lb-button:hover:not(.lb-disabled) {
+      background: var(--lb-blue-dark);
+      transform: translateY(-1px);
+    }
+    #lan-backup-install .lb-button-secondary {
+      background: #fff;
+      color: var(--lb-blue-dark);
+    }
+    #lan-backup-install .lb-button-secondary:hover:not(.lb-disabled) {
+      background: var(--lb-tint);
+    }
+    #lan-backup-install .lb-button:focus-visible,
+    #lan-backup-install summary:focus-visible,
+    #lan-backup-install select:focus-visible {
+      outline: 3px solid var(--lb-accent);
+      outline-offset: 3px;
+    }
+    #lan-backup-install .lb-disabled {
+      background: #edf1f3;
+      border-color: #edf1f3;
+      color: #697983;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    #lan-backup-install .lb-platform-choice {
+      display: grid;
+      gap: .35rem;
+      margin-top: 1rem;
+    }
+    #lan-backup-install .lb-platform-choice label {
+      color: var(--lb-muted);
+      font-size: .9rem;
+      font-weight: 650;
+    }
+    #lan-backup-install select {
+      background: #fff;
+      border: 1px solid var(--lb-line);
+      border-radius: 10px;
+      color: var(--lb-ink);
+      font: inherit;
+      min-height: 44px;
+      padding: .55rem .7rem;
+    }
+    #lan-backup-install .lb-status {
+      font-size: .9rem;
+      min-height: 1.45em;
+    }
+    #lan-backup-install details {
+      border-top: 1px solid var(--lb-line);
+      margin-top: 1.2rem;
+      padding-top: 1rem;
+    }
+    #lan-backup-install summary {
+      color: var(--lb-blue-dark);
+      cursor: pointer;
+      font-weight: 750;
+      line-height: 1.5;
+    }
+    #lan-backup-install ol,
+    #lan-backup-install ul {
+      color: var(--lb-muted);
+      line-height: 1.58;
+      margin: .9rem 0 0;
+      padding-left: 1.35rem;
+    }
+    #lan-backup-install li + li { margin-top: .55rem; }
+    #lan-backup-install code {
+      background: #f0f4f6;
+      border: 1px solid #e1e9ed;
+      border-radius: 5px;
+      color: var(--lb-ink);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: .9em;
+      overflow-wrap: anywhere;
+      padding: .12em .32em;
+    }
+    #lan-backup-install pre {
+      background: #f0f4f6;
+      border: 1px solid #e1e9ed;
+      border-radius: 10px;
+      color: var(--lb-ink);
+      margin: .8rem 0 0;
+      overflow-x: auto;
+      padding: .8rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    #lan-backup-install .lb-note {
+      background: #fff8f1;
+      border-left: 3px solid var(--lb-accent);
+      border-radius: 0 8px 8px 0;
+      margin-top: 1rem;
+      padding: .75rem .9rem;
+    }
+    #lan-backup-install .lb-footnote { font-size: .82rem; }
+    #lan-backup-install .lb-qr {
+      display: block;
+      height: 160px;
+      margin: 1rem auto 0;
+      object-fit: contain;
+      width: 160px;
+    }
+    @media (max-width: 760px) {
+      #lan-backup-install .lb-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 430px) {
+      #lan-backup-install .lb-card-head { display: block; }
+      #lan-backup-install .lb-tag { display: inline-block; margin-top: .6rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #lan-backup-install .lb-button { transition: none; }
+      #lan-backup-install .lb-button:hover:not(.lb-disabled) { transform: none; }
+    }
+  </style>
+
+  <div class="lb-hero">
+    <p class="lb-eyebrow">LAN Backup · your files stay on your network</p>
+    <h2 id="lb-install-title">Back up, restore, and sync over your local network.</h2>
+    <p class="lb-intro">
+      Install the phone app separately from the companion server. The server runs
+      on your own Windows, Linux, or macOS computer and receives files directly
+      over your local network.
+    </p>
+
+    <div class="lb-grid">
+      <article class="lb-card" aria-labelledby="lb-server-title">
+        <div class="lb-card-head">
+          <div>
+            <h3 id="lb-server-title">Install the computer server</h3>
+            <p>Choose the operating system of the computer that will store your files.</p>
+          </div>
+          <span class="lb-tag">Windows · Linux · macOS</span>
+        </div>
+
+        <div class="lb-platform-choice">
+          <label for="lb-server-os">Server computer</label>
+          <select id="lb-server-os" aria-describedby="lb-server-status">
+            <option value="">Choose an operating system</option>
+            <option value="windows">Windows 10/11</option>
+            <option value="linux">Linux</option>
+            <option value="macos">macOS</option>
+          </select>
+        </div>
+        <pre><code id="lb-command">Choose an operating system to show the setup command.</code></pre>
+        <button id="lb-copy-command" class="lb-button" type="button" disabled>
+          Copy setup command
+        </button>
+        <p id="lb-server-status" class="lb-status" aria-live="polite">
+          On the computer, open PowerShell or Terminal, then paste the copied command.
+        </p>
+        <p class="lb-footnote">
+          The browser cannot run an installer on your computer. The setup command
+          downloads the server package from GitHub, checks or installs Node.js,
+          and starts the server. Review the script source before running it if you
+          prefer.
+        </p>
+
+        <details data-lb-os="windows">
+          <summary>Windows setup and Desktop shortcut</summary>
+          <ol>
+            <li>Open PowerShell as your normal user—not as Administrator.</li>
+            <li>Run the command above. It creates <code>%USERPROFILE%\LAN_backup</code>,
+              downloads <code>setup.ps1</code>, and starts setup.</li>
+            <li>Setup downloads and extracts the server into
+              <code>LAN_backup\companion-server</code>. It checks for Node.js and
+              installs it when needed.</li>
+            <li>On first run, copy the generated authentication token into
+              <strong>LAN Backup → Settings → Auth Token</strong>. The token is
+              saved in <code>companion-server\.env</code>; keep it private.</li>
+            <li>Setup creates <strong>Start LAN Backup Server</strong> on the
+              Desktop with the LAN Backup icon. Double-click it to start the
+              server later. Its terminal window stays open while running; press
+              <code>Ctrl+C</code> to stop it.</li>
+          </ol>
+        </details>
+
+        <details data-lb-os="linux">
+          <summary>Linux setup and Desktop shortcut</summary>
+          <ol>
+            <li>Open Terminal and run the command above. It installs in
+              <code>~/LAN_backup/companion-server</code>.</li>
+            <li>If Node.js is missing, setup uses the supported package manager
+              and may request your password. The server starts in Terminal.</li>
+            <li>On first run, copy the generated authentication token into
+              <strong>LAN Backup → Settings → Auth Token</strong>. It is saved in
+              <code>companion-server/.env</code>; keep it private.</li>
+            <li>Setup creates <strong>Start LAN Backup Server</strong> on the
+              Desktop with the LAN Backup icon. Some desktop environments ask
+              you to right-click the shortcut and choose <strong>Allow
+              Launching</strong>. Press <code>Ctrl+C</code> in Terminal to stop
+              the server.</li>
+          </ol>
+        </details>
+
+        <details data-lb-os="macos">
+          <summary>macOS setup and Desktop shortcut</summary>
+          <ol>
+            <li>Open Terminal and run the command above. It installs in
+              <code>~/LAN_backup/companion-server</code>.</li>
+            <li>If Node.js is missing, setup uses Homebrew when available;
+              otherwise it downloads the official Node.js installer. The server
+              starts in Terminal.</li>
+            <li>On first run, copy the generated authentication token into
+              <strong>LAN Backup → Settings → Auth Token</strong>. It is saved in
+              <code>companion-server/.env</code>; keep it private.</li>
+            <li>Setup creates <strong>Start LAN Backup Server.app</strong> on
+              the Desktop with the LAN Backup icon. Open it to start the server
+              in Terminal. Press <code>Ctrl+C</code> in Terminal to stop it.</li>
+          </ol>
+        </details>
+
+        <p class="lb-note">
+          Keep the phone and computer on the same trusted Wi-Fi or LAN. The server
+          uses port <code>7823</code> by default. If your firewall asks, allow
+          access on the private network only; setup does not change firewall
+          rules. Do not expose the server to the public internet.
+        </p>
+        <p class="lb-footnote">
+          <a href="https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1">View Windows setup source</a>
+          ·
+          <a href="https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.sh">View Linux/macOS setup source</a>
+          ·
+          <a href="https://github.com/Marcseb/lan-backup#readme">Full README and installation guide</a>
+        </p>
+
+        <details>
+          <summary>Manual server package downloads</summary>
+          <p>Most users should run the setup command above. For manual installs:</p>
+          <ul>
+            <li><a href="https://github.com/Marcseb/lan-backup/releases/download/v1.1.0/companion-server.zip">Windows ZIP package</a></li>
+            <li><a href="https://github.com/Marcseb/lan-backup/releases/download/v1.1.0/companion-server.tar.gz">Linux/macOS TAR.GZ package</a></li>
+            <li><a href="https://raw.githubusercontent.com/Marcseb/lan-backup/main/artifacts/lan-backup/companion-server/CHECKSUMS.txt">SHA-256 checksums</a></li>
+          </ul>
+        </details>
+      </article>
+
+      <article class="lb-card" aria-labelledby="lb-app-title">
+        <div class="lb-card-head">
+          <div>
+            <h3 id="lb-app-title">Install the phone app</h3>
+            <p>The phone app is installed separately from the computer server.</p>
+          </div>
+          <span class="lb-tag">Android · iPhone</span>
+        </div>
+        <a id="lb-play-link" class="lb-button lb-disabled" aria-disabled="true" tabindex="-1">
+          Google Play listing not configured
+        </a>
+        <a id="lb-appstore-link" class="lb-button lb-button-secondary lb-disabled" aria-disabled="true" tabindex="-1">
+          App Store listing not configured
+        </a>
+        <img id="lb-play-qr" class="lb-qr" alt="QR code for the LAN Backup Google Play listing" hidden>
+        <p id="lb-app-status" class="lb-status" aria-live="polite">
+          Replace the store URL placeholders after the app is published.
+        </p>
+        <p class="lb-footnote">
+          After installing, open the app on your phone and connect to the
+          companion server on your local network.
+        </p>
+      </article>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.getElementById("lan-backup-install");
+      if (!root) return;
+
+      const config = {
+        play: "{{LAN_BACKUP_GOOGLE_PLAY_URL}}",
+        appStore: "{{LAN_BACKUP_APP_STORE_URL}}",
+        playQr: "{{LAN_BACKUP_GOOGLE_PLAY_QR_URL}}"
+      };
+      const commands = {
+        windows: 'New-Item -ItemType Directory -Force "$HOME\\LAN_backup" | Out-Null; Set-Location "$HOME\\LAN_backup"; Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1" -OutFile ".\\setup.ps1"; powershell.exe -ExecutionPolicy Bypass -File ".\\setup.ps1"',
+        linux: 'mkdir -p "$HOME/LAN_backup" && cd "$HOME/LAN_backup" && curl -fsSL https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.sh | bash',
+        macos: 'mkdir -p "$HOME/LAN_backup" && cd "$HOME/LAN_backup" && curl -fsSL https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.sh | bash'
+      };
+      const labels = { windows: "Windows", linux: "Linux", macos: "macOS" };
+      const select = root.querySelector("#lb-server-os");
+      const command = root.querySelector("#lb-command");
+      const copyButton = root.querySelector("#lb-copy-command");
+      const status = root.querySelector("#lb-server-status");
+      const placeholder = (value) => !value || value.includes("{{") || value.includes("}}");
+      const httpsUrl = (value) => {
+        if (placeholder(value)) return "";
+        try {
+          const url = new URL(value, document.baseURI);
+          return url.protocol === "https:" ? url.href : "";
+        } catch {
+          return "";
+        }
+      };
+      const setLink = (element, value, label) => {
+        const url = httpsUrl(value);
+        if (url) {
+          element.href = url;
+          element.textContent = label;
+          element.classList.remove("lb-disabled");
+          element.setAttribute("aria-disabled", "false");
+          element.removeAttribute("tabindex");
+          element.rel = "noopener noreferrer";
+        } else {
+          element.removeAttribute("href");
+          element.textContent = `${label} not configured`;
+          element.classList.add("lb-disabled");
+          element.setAttribute("aria-disabled", "true");
+          element.tabIndex = -1;
+        }
+        return url;
+      };
+      const detectOs = () => {
+        const platform = navigator.userAgentData?.platform || navigator.platform || "";
+        const agent = navigator.userAgent || "";
+        if (/Win/i.test(platform || agent)) return "windows";
+        if (/Mac/i.test(platform || agent)) return "macos";
+        if (/Linux/i.test(platform || agent) && !/Android/i.test(agent)) return "linux";
+        return "";
+      };
+      const updateOs = () => {
+        const os = select.value;
+        command.textContent = commands[os] || "Choose an operating system to show the setup command.";
+        copyButton.disabled = !commands[os];
+        root.querySelectorAll("details[data-lb-os]").forEach((details) => {
+          details.open = Boolean(os) && details.dataset.lbOs === os;
+        });
+        status.textContent = os
+          ? `On the ${labels[os]} computer, open ${os === "windows" ? "PowerShell" : "Terminal"} and paste this command. It installs the latest server release and creates the Desktop shortcut.`
+          : "On the computer, open PowerShell or Terminal, then paste the copied command.";
+      };
+      const fallbackCopy = (text) => {
+        const area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        const copied = document.execCommand("copy");
+        area.remove();
+        return copied;
+      };
+
+      select.value = detectOs();
+      select.addEventListener("change", updateOs);
+      updateOs();
+      copyButton.addEventListener("click", async () => {
+        try {
+          if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(commands[select.value]);
+          else if (!fallbackCopy(commands[select.value])) throw new Error("Clipboard unavailable");
+          status.textContent = `Copied the ${labels[select.value]} setup command. Paste it into ${select.value === "windows" ? "PowerShell" : "Terminal"} on the server computer.`;
+        } catch {
+          status.textContent = "Copy failed. Select and copy the command shown above manually.";
+        }
+      });
+
+      const playUrl = setLink(root.querySelector("#lb-play-link"), config.play, "Get LAN Backup on Google Play");
+      const appStoreUrl = setLink(root.querySelector("#lb-appstore-link"), config.appStore, "Get LAN Backup on the App Store");
+      const qrUrl = httpsUrl(config.playQr);
+      const qr = root.querySelector("#lb-play-qr");
+      if (qrUrl && playUrl) {
+        qr.src = qrUrl;
+        qr.hidden = false;
+      }
+      root.querySelector("#lb-app-status").textContent = playUrl || appStoreUrl
+        ? "After installing, connect the phone and computer to the same trusted local network."
+        : "Store links will appear here when the app listings are published.";
+    })();
+  </script>
+</section>
