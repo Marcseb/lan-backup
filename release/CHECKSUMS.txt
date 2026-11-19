@@ -1,0 +1,2 @@
+d4536bfea948ff474ce98ffcc0bacaab71f660a0eb70077ada2ef7431fc0e232  companion-server.tar.gz
+081149b4be9098342591cf7c40f344ad0f3d39229710ac72ca144b5feffc942b  companion-server.zip
