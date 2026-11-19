@@ -353,12 +353,15 @@
         <a id="lb-play-link" class="lb-button lb-disabled" aria-disabled="true" tabindex="-1">
           Google Play listing not configured
         </a>
+        <a id="lb-apk-link" class="lb-button lb-button-secondary lb-disabled" aria-disabled="true" tabindex="-1">
+          Android APK download not configured
+        </a>
         <a id="lb-appstore-link" class="lb-button lb-button-secondary lb-disabled" aria-disabled="true" tabindex="-1">
           App Store listing not configured
         </a>
-        <img id="lb-play-qr" class="lb-qr" alt="QR code for the LAN Backup Google Play listing" hidden>
+        <img id="lb-apk-qr" class="lb-qr" alt="QR code for the direct LAN Backup Android APK download" hidden>
         <p id="lb-app-status" class="lb-status" aria-live="polite">
-          Replace the store URL placeholders after the app is published.
+          Scan the QR code or open the APK link on an Android phone.
         </p>
         <p class="lb-footnote">
           After installing, open the app on your phone and connect to the
@@ -376,7 +379,8 @@
       const config = {
         play: "{{LAN_BACKUP_GOOGLE_PLAY_URL}}",
         appStore: "{{LAN_BACKUP_APP_STORE_URL}}",
-        playQr: "{{LAN_BACKUP_GOOGLE_PLAY_QR_URL}}"
+        apk: "https://github.com/Marcseb/lan-backup/releases/download/v1.1.0/lan-backup-android-source-1.0.6-peer-refresh-playapp-release.apk",
+        apkQrData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAAFAAQMAAAD3XjfpAAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAADL0lEQVRoge2aPZKsMAyERREQcgSOwtHgaByFIxASUOipWzLM1s565sXIyTI7Hw56bP20LfLtmBTjFGkPfu75WVd7HOdJZ9EAHgri2+ZsDGt36XS7hBsX4yZRBxL8BJqa9tc4NXAPzU3w0TCCDiT4DUjBuUSh+KDrqAtITfC/QAQAKq5bvw3rwACA9x4P+r5WE7IrOvq+VouOvwNAgu9BTyPNYYLv3d6Z3r3pPSzjMvq+/pmQEnwPXgOgx0cpy3YW/z1+jgTfgRPldlV17yI+roPqwu9t/zcMEM8Ey5PljqNTz8Kr5Y/Fy0JER0x0JlgHkWgbSo480+29JRqQloRtMA+fsR4TrIN4bNikMD6qOmjxkcsaSYZ5JsEKiJ3dRAhAfOyptzAATDOnaUqaeSSo6s2HK+k6Duu4FH+ARfWZYB30euVVcDYfJjgTzcSZTj4lWAPRiAjD48F9LVy1nmcgeWljEqyCEBT5uA3Fo+4RC4+LBYBZMEsU1w8EpxAKzTBA29db1M23L1rKmQRrYJGUmm80r1Z0H0tse4mXEqyAePAV3B4dBJd+GwiSoyl9JvgRRAR0U5rx0TCBq+AWF/phBs/zqSCUxPPhZrMbze6R3vVMqZoT/BPkxo2UEyYg9jW6OK+vNaZLsA6q26W2bNvwpIWmtHdx84uNk2AFFC/8yNJVuAIA9JYIALRxnghOjt/xUbmxV/EzNp+lSfAjaP9heR2ui7gLiOXILGOvRXmdYA3EwEOrOPtQ7OseiWaB3m5t3R1NghXQM3LER7oK3g7jCoJ68e0TPhGcomjmeux2ZuLY1xL1zN3uJfg3KHG6UU7Oo4ujq4CbLpdnn2Ad1Civy9WrTdjFoY3Dka+Fz+vGUIIVUGjyuctFc3/zM01dWF3fpvQTwRgsZzo3r3AyBM/ebxYwS2uCH0BKyn39y7xS9nAqLneCdZByu/CWZuAr4OYV0rXE11cgTbAGalzwQ5tCxXljiL8DJX85i3swWC74YbhZIJE+Gk3wa/Dlgp/f0PB7zbcVneAHUMpFSXRx6IZLlzLOXjWGy5VgFYw8w4VrlU9/BQC3FZBofiSkBN+C345/ZMDSWdxUGagAAAAASUVORK5CYII="
       };
       const commands = {
         windows: 'New-Item -ItemType Directory -Force "$HOME\\LAN_backup" | Out-Null; Set-Location "$HOME\\LAN_backup"; Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Marcseb/lan-backup/main/setup.ps1" -OutFile ".\\setup.ps1"; powershell.exe -ExecutionPolicy Bypass -File ".\\setup.ps1"',
@@ -462,16 +466,18 @@
       });
 
       const playUrl = setLink(root.querySelector("#lb-play-link"), config.play, "Get LAN Backup on Google Play");
+      const apkUrl = setLink(root.querySelector("#lb-apk-link"), config.apk, "Download the LAN Backup Android APK");
       const appStoreUrl = setLink(root.querySelector("#lb-appstore-link"), config.appStore, "Get LAN Backup on the App Store");
-      const qrUrl = httpsUrl(config.playQr);
-      const qr = root.querySelector("#lb-play-qr");
-      if (qrUrl && playUrl) {
-        qr.src = qrUrl;
+      const qr = root.querySelector("#lb-apk-qr");
+      if (apkUrl && config.apkQrData.startsWith("data:image/png;base64,")) {
+        qr.src = config.apkQrData;
         qr.hidden = false;
       }
-      root.querySelector("#lb-app-status").textContent = playUrl || appStoreUrl
-        ? "After installing, connect the phone and computer to the same trusted local network."
-        : "Store links will appear here when the app listings are published.";
+      root.querySelector("#lb-app-status").textContent = apkUrl
+        ? "On Android, open the APK link or scan the QR code. Only install APKs from a source you trust."
+        : (playUrl || appStoreUrl
+          ? "After installing, connect the phone and computer to the same trusted local network."
+          : "Store links will appear here when the app listings are published.");
     })();
   </script>
 </section>
