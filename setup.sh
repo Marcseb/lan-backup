@@ -29,55 +29,6 @@ echo ""
 echo "  Backup folder : $SETUP_DIR"
 echo ""
 
-# -- Desktop shortcut ---------------------------------------------------------
-# Always (re)creates the shortcut so that reinstalls or moves to a new folder
-# update the shortcut to the correct path.
-create_shortcut() {
-  local OS
-  OS="$(uname -s)"
-
-  # Resolve the Desktop folder (respects XDG on Linux).
-  local DESKTOP="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
-
-  if [[ "$OS" == "Darwin" ]]; then
-    # macOS: a .command file is double-clickable in Finder and opens Terminal.
-    local SHORTCUT="$DESKTOP/Start LAN Backup Server.command"
-    if [[ -d "$DESKTOP" ]]; then
-      cat > "$SHORTCUT" << ENDSCRIPT
-#!/usr/bin/env bash
-cd "$SETUP_DIR"
-bash companion-server/install.sh
-ENDSCRIPT
-      chmod +x "$SHORTCUT"
-      echo "  Desktop shortcut created/updated:"
-      echo "  $SHORTCUT"
-    fi
-
-  elif [[ "$OS" == "Linux" ]]; then
-    # Linux: XDG .desktop file -- recognised by GNOME, KDE, XFCE, etc.
-    # Uses "bash -lc" (login shell) so ~/.bash_profile is sourced and NVM /
-    # other Node version managers are on PATH.
-    # LB_BACKUP_DIR is embedded directly so the correct folder is always used,
-    # even if .env is missing or was regenerated.
-    local SHORTCUT="$DESKTOP/lan-backup-server.desktop"
-    if [[ -d "$DESKTOP" ]]; then
-      cat > "$SHORTCUT" << ENDDESKTOP
-[Desktop Entry]
-Type=Application
-Name=LAN Backup Server
-Comment=Start the LAN Backup companion server
-Exec=bash -lc "cd '$SETUP_DIR' && LB_BACKUP_DIR='$SETUP_DIR' bash companion-server/install.sh; exec bash"
-Terminal=true
-Icon=network-server
-Categories=Network;
-ENDDESKTOP
-      chmod +x "$SHORTCUT"
-      echo "  Desktop shortcut created/updated:"
-      echo "  $SHORTCUT"
-    fi
-  fi
-}
-
 # -- Check for already-installed companion server -----------------------------
 if [[ -f "$DEST_DIR/companion-server/server.js" ]]; then
   echo "  Existing installation found — downloading latest version..."
@@ -104,7 +55,6 @@ if [[ -f "$DEST_DIR/companion-server/server.js" ]]; then
     echo "  ℹ️   No .env found — the server will ask you to set an auth token now."
   fi
   echo ""
-  create_shortcut
   export LB_BACKUP_DIR="$SETUP_DIR"
   # Use </dev/tty so the first-run prompt works even when piped via "curl | bash".
   exec bash "$DEST_DIR/companion-server/install.sh" </dev/tty
@@ -141,9 +91,6 @@ if [[ -f "$DEST_DIR/companion-server/.env" ]]; then
   rm -f "$DEST_DIR/companion-server/.env"
   echo "  (Removed previous .env — a new auth token will be created now.)"
 fi
-
-# -- Create desktop shortcut --------------------------------------------------
-create_shortcut
 
 # -- Run installer (pass backup dir so it is saved to .env on first run) ------
 echo ""
